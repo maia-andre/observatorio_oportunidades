@@ -1,6 +1,6 @@
 # Validação 1 - Fase 0
 
-Esta validação marca a conclusão prática da **Fase 0 (MVP de Descoberta)** do Observatório de Oportunidades Institucionais, comprovando a viabilidade de localizar e armazenar dados automaticamente.
+Esta validação marca a prática da **Fase 0 (MVP de Descoberta)** do Observatório de Oportunidades Institucionais, comprovando a viabilidade de localizar e armazenar dados automaticamente.
 
 ## Resumo Arquitetural
 
