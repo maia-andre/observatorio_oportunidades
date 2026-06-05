@@ -1,4 +1,7 @@
-# PoC - Observatório de Oportunidades Institucionais
+![Banner](banner.png)
+
+# <img src="logo.jpg" alt="Logo" width="45" align="left"> PoC - Observatório de Oportunidades Institucionais
+<br>
 
 ## Visão Geral
 
@@ -108,6 +111,15 @@ C --> D[Painel Simples]
 ## Meta
 
 Descobrir oportunidades sem intervenção humana.
+
+## O Que Foi Alcançado (Validação 1)
+- Estruturamos o banco de dados PostgreSQL e os modelos via FastAPI/SQLModel.
+- Validamos a coleta autônoma de **140 oportunidades** a partir de 8 fontes iniciais.
+- Fontes de RSS (Nível A) como Transferegov, Prêmio Espírito Público, ABIPEM e Capta rodaram com 100% de sucesso.
+- Fontes de API/Sitemap (Nível B) demonstraram capacidade de parsing complexo e lidaram bem com requisições (Google Education, ENAP).
+- Criamos um Painel Simples com Jinja2 para exibir os resultados.
+
+**Próximos Passos:** Ampliaremos os testes com as demais plataformas (Nível C e D) ainda não validadas, focando no tratamento das APIs com autenticação e parsing de HTML estático.
 
 ---
 

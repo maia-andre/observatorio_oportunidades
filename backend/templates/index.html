@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel - Observatório de Oportunidades</title>
+    <!-- PicoCSS para estilização simples e moderna sem escrever CSS customizado -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        .container { margin-top: 2rem; max-width: 1200px; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>Observatório de Oportunidades Institucionais</h1>
+        <p>Fase 0 - MVP de Descoberta</p>
+        
+        <article>
+            <header>Oportunidades Encontradas</header>
+            <div class="overflow-auto">
+                <table class="striped">
+                    <thead>
+                        <tr>
+                            <th scope="col" style="width: 15%">Data Pub.</th>
+                            <th scope="col" style="width: 50%">Título</th>
+                            <th scope="col" style="width: 20%">Fonte</th>
+                            <th scope="col" style="width: 15%">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for op in opportunities %}
+                        <tr>
+                            <td>{{ op.published_date.strftime('%d/%m/%Y') if op.published_date else 'N/A' }}</td>
+                            <td>
+                                <strong>{{ op.title }}</strong><br>
+                                <small style="color: var(--pico-muted-color);">{{ op.description[:150] + '...' if op.description and op.description|length > 150 else op.description or '' }}</small>
+                            </td>
+                            <td><kbd>{{ op.source }}</kbd></td>
+                            <td><a href="{{ op.url }}" target="_blank" role="button" class="outline">Acessar</a></td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: 2rem;">
+                                Nenhuma oportunidade encontrada ainda no banco de dados.<br>
+                                Execute os scripts em <code>collectors/</code> para povoar o banco.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    </main>
+</body>
+</html>
