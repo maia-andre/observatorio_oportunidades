@@ -32,6 +32,7 @@ Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste r
   - `models.py` — modelo `Opportunity`
   - `templates/index.html` — painel (Jinja2 + PicoCSS)
 - `collectors/` — scripts autônomos de coleta, um subdiretório por tipo: `rss/`, `api/`, `html/`, `sitemap/`
+- `processing/` — processamento pós-coleta: `normalizer.py` (camada de Normalização da Fase 1; o motor de classificação da Fase 2 entra aqui)
 - `database/` — arquivo SQLite local (ignorado pelo git)
 - `docs/` — documentação por fase (`arquitetura/`, `fase 0/`, `fase 1/`)
 - `docker-compose.yml` — **opcional**, apenas para quem quiser rodar com PostgreSQL
@@ -70,9 +71,10 @@ python collectors/api/api_collector.py
 
 ## Coletores — convenções
 
-- Cada coletor é um **script Python autônomo** (executável por cron/CI), desacoplado do processo da API.
+- Cada coletor é um **script Python autônomo** (executável por cron/CI), desacoplado do processo da API. Garantem o schema chamando `create_db_and_tables()` no início, então rodam mesmo sem o servidor ter subido antes.
 - Importam engine/modelos do backend ajustando `sys.path` para a raiz do projeto.
-- **Deduplicam por `url`** (consultam a existência antes de inserir) e dão `commit` ao final.
+- **Constroem as oportunidades via `processing.normalizer.normalize_opportunity`** (não instanciam `Opportunity` direto): isso limpa HTML, apara texto e canonicaliza a URL antes de persistir.
+- **Deduplicam pela URL canônica** (`op.url`, consultando a existência antes de inserir) e dão `commit` ao final.
 - Para adicionar uma fonte: edite a lista `*_SOURCES` no coletor do tipo correspondente, ou crie um novo script no subdiretório adequado seguindo o mesmo padrão (Session do SQLModel → checagem por `url` → `commit`).
 - O coletor de API/sitemap limita a 5 itens por fonte (proposital, para o MVP).
 

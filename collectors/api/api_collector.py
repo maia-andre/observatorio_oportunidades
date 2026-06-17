@@ -7,8 +7,9 @@ from bs4 import BeautifulSoup
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from sqlmodel import Session, select
-from backend.database import engine
+from backend.database import engine, create_db_and_tables
 from backend.models import Opportunity, utcnow
+from processing.normalizer import normalize_opportunity
 
 API_SOURCES = [
     {"name": "Portal da Transparência", "url": "https://api.portaldatransparencia.gov.br/api-de-dados/emendas", "type": "json"},
@@ -19,6 +20,7 @@ API_SOURCES = [
 
 def collect_api():
     print("Iniciando coleta API/Sitemap...")
+    create_db_and_tables()  # garante o schema mesmo sem o servidor ter rodado antes
     with Session(engine) as session:
         for source in API_SOURCES:
             print(f"\n[Coletando] {source['name']} ({source['url']})")
@@ -42,17 +44,20 @@ def collect_api():
                         loc = url_node.find("loc")
                         if not loc: continue
                         link = loc.text
-                        
-                        existing = session.exec(select(Opportunity).where(Opportunity.url == link)).first()
+
+                        title_guess = link.rstrip('/').split('/')[-1].replace('-', ' ').title() or 'Página Inicial'
+                        op = normalize_opportunity(
+                            title=f"[Sitemap] {title_guess}",
+                            description=f"Conteúdo indexado automaticamente a partir do sitemap de {source['name']}.",
+                            url=link,
+                            published_date=utcnow(), # Usamos agora como fallback
+                            source=source['name'],
+                        )
+                        if op is None:
+                            continue
+
+                        existing = session.exec(select(Opportunity).where(Opportunity.url == op.url)).first()
                         if not existing:
-                            title_guess = link.rstrip('/').split('/')[-1].replace('-', ' ').title() or 'Página Inicial'
-                            op = Opportunity(
-                                title=f"[Sitemap] {title_guess}",
-                                description=f"Conteúdo indexado automaticamente a partir do sitemap de {source['name']}.",
-                                url=link,
-                                published_date=utcnow(), # Usamos agora como fallback
-                                source=source['name']
-                            )
                             session.add(op)
                             novos_itens += 1
                             print(f"  + Adicionado (Sitemap): {title_guess}")
@@ -66,16 +71,19 @@ def collect_api():
                                 codigo = item.get('codigoEmenda', item.get('id', 'N/A'))
                                 link = f"https://portaldatransparencia.gov.br/emendas/{codigo}"
                                 title = f"Emenda {codigo} - {item.get('nomeAutor', 'Desconhecido')}"
-                                
-                                existing = session.exec(select(Opportunity).where(Opportunity.url == link)).first()
+
+                                op = normalize_opportunity(
+                                    title=title,
+                                    description=f"Emenda parlamentar extraída via API. Autor: {item.get('nomeAutor', 'N/A')}",
+                                    url=link,
+                                    published_date=utcnow(),
+                                    source=source['name'],
+                                )
+                                if op is None:
+                                    continue
+
+                                existing = session.exec(select(Opportunity).where(Opportunity.url == op.url)).first()
                                 if not existing:
-                                    op = Opportunity(
-                                        title=title,
-                                        description=f"Emenda parlamentar extraída via API. Autor: {item.get('nomeAutor', 'N/A')}",
-                                        url=link,
-                                        published_date=utcnow(),
-                                        source=source['name']
-                                    )
                                     session.add(op)
                                     novos_itens += 1
                                     print(f"  + Adicionado (API): {title}")
