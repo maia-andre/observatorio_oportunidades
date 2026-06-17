@@ -35,6 +35,7 @@ Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste r
 - `processing/` — processamento pós-coleta: `normalizer.py` (Normalização, Fase 1) e `rules.py` + `classifier.py` (Curadoria por regras, Fase 2)
 - `database/` — arquivo SQLite local (ignorado pelo git)
 - `docs/` — documentação por fase (`arquitetura/`, `fase 0/`, `fase 1/`)
+- `run_pipeline.py` — orquestrador: roda coleta (RSS + API/Sitemap) + classificação num único comando (aceita `--reset`)
 - `docker-compose.yml` — **opcional**, apenas para quem quiser rodar com PostgreSQL
 - `frontend/` — reservado para fases futuras
 
@@ -55,12 +56,15 @@ pip install -r requirements.txt
 uvicorn backend.main:app --reload
 # painel em http://localhost:8000
 
-# 3) em outro terminal (venv ativo), popular o banco
+# 3) em outro terminal (venv ativo), rodar a pipeline completa (coleta + classificação)
+python run_pipeline.py
+#    use --reset para reclassificar tudo do zero após alterar as regras:
+python run_pipeline.py --reset
+
+#    (ou as etapas individualmente:)
 python collectors/rss/rss_collector.py
 python collectors/api/api_collector.py
-
-# 4) (opcional) classificar as oportunidades por categoria (Fase 2)
-python processing/classifier.py
+python processing/classifier.py          # aceita --reset
 ```
 
 > **Opcional — PostgreSQL:** `docker-compose up -d` e, antes de iniciar o servidor/coletores, defina a variável de ambiente:

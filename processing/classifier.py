@@ -37,6 +37,24 @@ def classify_text(title: str, description: Optional[str] = None) -> Optional[str
     return None
 
 
+def reset_classification() -> int:
+    """Zera a classificação (category=None, status="novo") de todos os registros.
+
+    Útil para **reclassificar do zero** após alterar as regras (`rules.py`),
+    já que `classify_pending` só processa itens com `category IS NULL`.
+    Retorna a quantidade de registros resetados.
+    """
+    create_db_and_tables()
+    with Session(engine) as session:
+        ops = session.exec(select(Opportunity)).all()
+        for op in ops:
+            op.category = None
+            op.status = "novo"
+            session.add(op)
+        session.commit()
+    return len(ops)
+
+
 def classify_pending() -> dict:
     """Classifica as oportunidades com `category IS NULL` e atualiza o status.
 
@@ -73,6 +91,11 @@ def classify_pending() -> dict:
 
 
 if __name__ == "__main__":
+    # `--reset` reclassifica tudo do zero (após mudar as regras).
+    if "--reset" in sys.argv:
+        n = reset_classification()
+        print(f"Classificação zerada em {n} registro(s).")
+
     r = classify_pending()
     print(f"\n> Classificadas: {r['classificado']} | Não classificadas: {r['nao_classificado']}")
     for cat, n in sorted(r["por_categoria"].items(), key=lambda x: -x[1]):
