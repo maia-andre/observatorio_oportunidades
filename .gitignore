@@ -2,3 +2,7 @@ venv/
 .venv/
 __pycache__/
 *.pyc
+
+# Banco SQLite local (Fase 0)
+*.db
+*.sqlite3

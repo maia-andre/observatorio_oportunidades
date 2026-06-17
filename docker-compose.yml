@@ -1,3 +1,5 @@
+# OPCIONAL — necessário apenas para quem quiser rodar com PostgreSQL.
+# O banco padrão da Fase 0 é SQLite (não requer Docker). Veja CLAUDE.md / docs/arquitetura.
 version: '3.8'
 
 services:

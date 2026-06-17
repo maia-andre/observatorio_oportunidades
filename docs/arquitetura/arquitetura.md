@@ -9,7 +9,7 @@ Este documento serve como referência central para a arquitetura tecnológica e 
 O foco da **Fase 0** foi estabelecer uma fundação estável e autônoma, validando o fluxo básico de coleta, persistência e exibição. Foi projetada para evitar overengineering, priorizando a estabilidade da orquestração dos dados.
 
 ### 1. Stack Tecnológico (MVP)
-- **Banco de Dados:** PostgreSQL 15, provisionado via Docker Compose para garantir consistência de ambiente.
+- **Banco de Dados:** SQLite (arquivo local em `database/observatorio.db`) como **padrão da Fase 0** — **não requer Docker**, o que simplifica e padroniza o setup entre as máquinas dos desenvolvedores. O PostgreSQL continua suportado (basta definir a variável `DATABASE_URL`) e permanece como alvo para as fases posteriores; o `docker-compose.yml` para subir o Postgres é mantido como opcional.
 - **ORM e Validação:** `SQLModel` (que envelopa o SQLAlchemy e o Pydantic), garantindo que a declaração do banco e a validação das classes ocorram em um único ponto, mantendo o código enxuto.
 - **Backend/Servidor Web:** `FastAPI`.
 - **Frontend (Painel Simples):** Integrado ao backend usando templates `Jinja2` e estilizado via CDN com `PicoCSS`. Para a Fase 0, a renderização Server-Side HTML elimina a necessidade de subir um ambiente Node/Next.js complexo apenas para validação.
@@ -41,15 +41,19 @@ Siga os passos abaixo para levantar a infraestrutura e simular o povoamento do b
 
 ### Pré-requisitos
 - Python 3.10+
-- Docker e Docker Compose instalados e rodando
+- (Opcional) Docker e Docker Compose — **apenas** se optar por usar PostgreSQL em vez do SQLite padrão
 
 ### Passo a Passo
 
-1. **Subir a Infraestrutura de Banco de Dados:**
-   No terminal, na raiz do projeto, inicie o PostgreSQL:
-   ```bash
-   docker-compose up -d
-   ```
+1. **Banco de Dados (SQLite — padrão):**
+   Nenhuma ação necessária. O arquivo `database/observatorio.db` é criado automaticamente no primeiro boot do servidor.
+
+   > **Opcional (PostgreSQL):** se preferir Postgres, suba o container e aponte a variável de ambiente antes de iniciar o servidor e os coletores:
+   > ```bash
+   > docker-compose up -d
+   > # Windows (PowerShell): $env:DATABASE_URL = "postgresql://observatorio:observatorio_password@localhost:5432/observatorio_db"
+   > # Linux/Mac:            export DATABASE_URL="postgresql://observatorio:observatorio_password@localhost:5432/observatorio_db"
+   > ```
 
 2. **Configurar o Ambiente Virtual (Python):**
    ```bash

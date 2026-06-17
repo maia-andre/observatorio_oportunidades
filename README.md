@@ -89,7 +89,7 @@ flowchart TB
 A[Fontes Monitoradas]
 --> B[Coletor]
 
-B --> C[(PostgreSQL)]
+B --> C[(SQLite)]
 
 C --> D[Painel Simples]
 ```
@@ -120,6 +120,8 @@ Descobrir oportunidades sem intervenção humana.
 - Criamos um Painel Simples com Jinja2 para exibir os resultados.
 
 **Próximos Passos:** Ampliaremos os testes com as demais plataformas (Nível C e D) ainda não validadas, focando no tratamento das APIs com autenticação e parsing de HTML estático.
+
+> **Nota de Arquitetura (Jun/2026):** a Fase 0 foi pivotada de PostgreSQL para **SQLite** como banco padrão local, removendo a dependência de Docker e padronizando o ambiente entre os desenvolvedores. O PostgreSQL segue suportado via variável `DATABASE_URL` e permanece como alvo para as fases seguintes.
 
 ---
 
@@ -392,7 +394,8 @@ Disponibilizar inteligência institucional para toda a administração.
 
 ## Banco de Dados
 
-* PostgreSQL
+* SQLite (padrão da Fase 0 — sem Docker)
+* PostgreSQL (suportado via `DATABASE_URL`; alvo das fases seguintes)
 
 ## Frontend
 
