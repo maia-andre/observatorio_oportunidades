@@ -6,13 +6,13 @@ Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste r
 
 **Observatório de Oportunidades Institucionais** — plataforma para monitorar automaticamente fontes públicas (RSS, APIs, sitemaps, HTML) e consolidar "oportunidades" institucionais (editais, premiações, emendas parlamentares, convênios, programas federais/estaduais, chamamentos públicos etc.) em uma base única. É uma PoC evolutiva, organizada em fases (0 a 5).
 
-## Estado atual — Fase 0 (MVP de Descoberta)
+## Estado atual
 
-- Fluxo validado de ponta a ponta: **coleta autônoma → persistência → painel HTML**. A "Validação 1" coletou ~140 oportunidades de 8 fontes iniciais.
+- **Fase 0 (Descoberta)** e **Fase 1 (Radar Institucional — backend/painel)** concluídas: coleta autônoma → **normalização** → persistência → painel com busca/filtros/paginação.
+- **Fase 2 (Curadoria por regras)** com MVP entregue: classificador por palavras-chave (`processing/classifier.py`) preenche `category` e move `status` (`classificado`/`nao_classificado`). Sem IA (isso é Fase 3).
 - Backend FastAPI + SQLModel; painel server-side com Jinja2 + PicoCSS (via CDN).
-- **Banco padrão: SQLite** (`database/observatorio.db`, sem Docker). PostgreSQL continua suportado via `DATABASE_URL` e é o alvo para fases futuras.
-- Em aberto: validar fontes remanescentes — issues **#3** (RSS) e **#4** (API).
-- Fora do escopo da Fase 0: IA, classificação, alertas, OCR.
+- **Banco padrão: SQLite** (`database/observatorio.db`, sem Docker); PostgreSQL via `DATABASE_URL` (alvo das fases futuras).
+- Em aberto: validação documentada das fontes RSS/API — issues **#3/#4** (Diego); ampliar regras/cobertura da classificação (issues **#6/#7/#8**).
 
 ## Stack
 
@@ -32,7 +32,7 @@ Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste r
   - `models.py` — modelo `Opportunity`
   - `templates/index.html` — painel (Jinja2 + PicoCSS)
 - `collectors/` — scripts autônomos de coleta, um subdiretório por tipo: `rss/`, `api/`, `html/`, `sitemap/`
-- `processing/` — processamento pós-coleta: `normalizer.py` (camada de Normalização da Fase 1; o motor de classificação da Fase 2 entra aqui)
+- `processing/` — processamento pós-coleta: `normalizer.py` (Normalização, Fase 1) e `rules.py` + `classifier.py` (Curadoria por regras, Fase 2)
 - `database/` — arquivo SQLite local (ignorado pelo git)
 - `docs/` — documentação por fase (`arquitetura/`, `fase 0/`, `fase 1/`)
 - `docker-compose.yml` — **opcional**, apenas para quem quiser rodar com PostgreSQL
@@ -58,6 +58,9 @@ uvicorn backend.main:app --reload
 # 3) em outro terminal (venv ativo), popular o banco
 python collectors/rss/rss_collector.py
 python collectors/api/api_collector.py
+
+# 4) (opcional) classificar as oportunidades por categoria (Fase 2)
+python processing/classifier.py
 ```
 
 > **Opcional — PostgreSQL:** `docker-compose up -d` e, antes de iniciar o servidor/coletores, defina a variável de ambiente:
@@ -92,9 +95,9 @@ python collectors/api/api_collector.py
 
 ## Roadmap (resumo)
 
-0. **MVP de Descoberta** (atual) — coleta + persistência + painel
-1. **Radar Institucional** — inbox única, histórico, deduplicação, filtros, pesquisa
-2. **Curadoria Automatizada** — classificação por regras
+0. **MVP de Descoberta** ✅ — coleta + persistência + painel
+1. **Radar Institucional** ✅ (backend/painel) — normalização, histórico, deduplicação, filtros, pesquisa
+2. **Curadoria Automatizada** 🚧 MVP — classificação por regras (`processing/classifier.py`)
 3. **Assistente de IA** — LLM/OCR (resumo, classificação semântica, extração de prazos)
 4. **Matching Institucional** — score de aderência oportunidade × município
 5. **Centro de Inteligência** — monitoramento legislativo/orçamentário e apoio à decisão
