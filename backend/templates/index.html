@@ -8,15 +8,38 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <style>
         .container { margin-top: 2rem; max-width: 1200px; }
+        .filtros { margin-bottom: 1.5rem; }
+        .paginacao { display: flex; justify-content: space-between; align-items: center; }
+        .paginacao ul { margin: 0; }
     </style>
 </head>
 <body>
     <main class="container">
         <h1>Observatório de Oportunidades Institucionais</h1>
-        <p>Fase 0 - MVP de Descoberta</p>
-        
+        <p>Fase 1 - Radar Institucional</p>
+
+        <!-- Filtros: busca textual, fonte e ordenação (GET preserva o estado na URL) -->
+        <form method="get" role="search" class="filtros">
+            <div class="grid">
+                <input type="search" name="q" placeholder="Buscar por título ou descrição..." value="{{ q }}">
+                <select name="source" aria-label="Filtrar por fonte">
+                    <option value="">Todas as fontes</option>
+                    {% for s in sources %}
+                    <option value="{{ s }}" {% if s == source %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+                <select name="order" aria-label="Ordenar por data">
+                    <option value="desc" {% if order != 'asc' %}selected{% endif %}>Mais recentes</option>
+                    <option value="asc" {% if order == 'asc' %}selected{% endif %}>Mais antigas</option>
+                </select>
+                <button type="submit">Filtrar</button>
+            </div>
+        </form>
+
         <article>
-            <header>Oportunidades Encontradas</header>
+            <header>
+                <strong>{{ total }}</strong> oportunidade(s) encontrada(s){% if q or source %} <small>(filtrado)</small>{% endif %}
+            </header>
             <div class="overflow-auto">
                 <table class="striped">
                     <thead>
@@ -41,8 +64,12 @@
                         {% else %}
                         <tr>
                             <td colspan="4" style="text-align: center; padding: 2rem;">
+                                {% if q or source %}
+                                Nenhuma oportunidade corresponde aos filtros aplicados.
+                                {% else %}
                                 Nenhuma oportunidade encontrada ainda no banco de dados.<br>
                                 Execute os scripts em <code>collectors/</code> para povoar o banco.
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -50,6 +77,32 @@
                 </table>
             </div>
         </article>
+
+        {% if total_pages > 1 %}
+        <nav class="paginacao">
+            <ul>
+                <li>
+                    {% if page > 1 %}
+                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&order={{ order|urlencode }}&page={{ page - 1 }}" role="button" class="secondary">← Anterior</a>
+                    {% else %}
+                    <a href="#" role="button" class="secondary" aria-disabled="true">← Anterior</a>
+                    {% endif %}
+                </li>
+            </ul>
+            <ul>
+                <li><small>Página {{ page }} de {{ total_pages }}</small></li>
+            </ul>
+            <ul>
+                <li>
+                    {% if page < total_pages %}
+                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&order={{ order|urlencode }}&page={{ page + 1 }}" role="button" class="secondary">Próxima →</a>
+                    {% else %}
+                    <a href="#" role="button" class="secondary" aria-disabled="true">Próxima →</a>
+                    {% endif %}
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
     </main>
 </body>
 </html>
