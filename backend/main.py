@@ -29,17 +29,24 @@ def read_root(
     request: Request,
     q: str = "",
     source: str = "",
+    category: str = "",
     order: str = "desc",
     page: int = 1,
 ):
-    """Painel com busca, filtro por fonte, ordenação por data e paginação."""
+    """Painel com busca, filtro por fonte/categoria, ordenação por data e paginação."""
     if page < 1:
         page = 1
 
     with Session(engine) as session:
-        # Fontes distintas para alimentar o seletor de filtro.
+        # Fontes e categorias distintas para alimentar os seletores de filtro.
         sources = session.exec(
             select(Opportunity.source).distinct().order_by(Opportunity.source)
+        ).all()
+        categories = session.exec(
+            select(Opportunity.category)
+            .where(Opportunity.category.is_not(None))
+            .distinct()
+            .order_by(Opportunity.category)
         ).all()
 
         # Query base + query de contagem (compartilham os mesmos filtros).
@@ -58,6 +65,10 @@ def read_root(
         if source:
             statement = statement.where(Opportunity.source == source)
             count_statement = count_statement.where(Opportunity.source == source)
+
+        if category:
+            statement = statement.where(Opportunity.category == category)
+            count_statement = count_statement.where(Opportunity.category == category)
 
         # Ordenação por data de publicação (padrão: mais recentes primeiro).
         if order == "asc":
@@ -81,11 +92,13 @@ def read_root(
             context={
                 "opportunities": opportunities,
                 "sources": sources,
+                "categories": categories,
                 "total": total,
                 "page": page,
                 "total_pages": total_pages,
                 "q": q,
                 "source": source,
+                "category": category,
                 "order": order,
             },
         )

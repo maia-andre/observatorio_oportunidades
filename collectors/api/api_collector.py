@@ -1,7 +1,6 @@
 import os
 import sys
 import requests
-from datetime import datetime
 from bs4 import BeautifulSoup
 
 # Adiciona a raiz do projeto ao sys.path para importar o backend
@@ -9,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from sqlmodel import Session, select
 from backend.database import engine
-from backend.models import Opportunity
+from backend.models import Opportunity, utcnow
 
 API_SOURCES = [
     {"name": "Portal da Transparência", "url": "https://api.portaldatransparencia.gov.br/api-de-dados/emendas", "type": "json"},
@@ -51,7 +50,7 @@ def collect_api():
                                 title=f"[Sitemap] {title_guess}",
                                 description=f"Conteúdo indexado automaticamente a partir do sitemap de {source['name']}.",
                                 url=link,
-                                published_date=datetime.utcnow(), # Usamos agora como fallback
+                                published_date=utcnow(), # Usamos agora como fallback
                                 source=source['name']
                             )
                             session.add(op)
@@ -74,7 +73,7 @@ def collect_api():
                                         title=title,
                                         description=f"Emenda parlamentar extraída via API. Autor: {item.get('nomeAutor', 'N/A')}",
                                         url=link,
-                                        published_date=datetime.utcnow(),
+                                        published_date=utcnow(),
                                         source=source['name']
                                     )
                                     session.add(op)

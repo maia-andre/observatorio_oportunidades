@@ -39,7 +39,7 @@ Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste r
 
 ## Modelo de dados (`Opportunity`)
 
-`id` (PK) · `title` · `description?` · `url` (**único e indexado — chave de deduplicação**) · `published_date?` · `source` · `collected_at`. Definido em `backend/models.py`.
+`id` (PK) · `title` · `description?` · `url` (**único e indexado — chave de deduplicação**) · `published_date?` · `source` · `category?` · `deadline?` (prazo) · `status` (default `novo`) · `collected_at`. Definido em `backend/models.py`. Os campos `category`/`deadline`/`status` são da Fase 1 e permanecem vazios/`novo` até a curadoria/classificação (Fase 2). O helper `utcnow()` em `models.py` substitui o depreciado `datetime.utcnow()`.
 
 ## Como rodar (local, sem Docker)
 

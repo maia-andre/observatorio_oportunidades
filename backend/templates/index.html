@@ -28,6 +28,12 @@
                     <option value="{{ s }}" {% if s == source %}selected{% endif %}>{{ s }}</option>
                     {% endfor %}
                 </select>
+                <select name="category" aria-label="Filtrar por categoria">
+                    <option value="">Todas as categorias</option>
+                    {% for c in categories %}
+                    <option value="{{ c }}" {% if c == category %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
                 <select name="order" aria-label="Ordenar por data">
                     <option value="desc" {% if order != 'asc' %}selected{% endif %}>Mais recentes</option>
                     <option value="asc" {% if order == 'asc' %}selected{% endif %}>Mais antigas</option>
@@ -38,16 +44,17 @@
 
         <article>
             <header>
-                <strong>{{ total }}</strong> oportunidade(s) encontrada(s){% if q or source %} <small>(filtrado)</small>{% endif %}
+                <strong>{{ total }}</strong> oportunidade(s) encontrada(s){% if q or source or category %} <small>(filtrado)</small>{% endif %}
             </header>
             <div class="overflow-auto">
                 <table class="striped">
                     <thead>
                         <tr>
-                            <th scope="col" style="width: 15%">Data Pub.</th>
-                            <th scope="col" style="width: 50%">Título</th>
-                            <th scope="col" style="width: 20%">Fonte</th>
-                            <th scope="col" style="width: 15%">Ação</th>
+                            <th scope="col" style="width: 12%">Data Pub.</th>
+                            <th scope="col" style="width: 43%">Título</th>
+                            <th scope="col" style="width: 15%">Categoria</th>
+                            <th scope="col" style="width: 16%">Fonte</th>
+                            <th scope="col" style="width: 14%">Ação</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -57,14 +64,19 @@
                             <td>
                                 <strong>{{ op.title }}</strong><br>
                                 <small style="color: var(--pico-muted-color);">{{ op.description[:150] + '...' if op.description and op.description|length > 150 else op.description or '' }}</small>
+                                {% if op.deadline %}<br><small>⏰ Prazo: {{ op.deadline.strftime('%d/%m/%Y') }}</small>{% endif %}
+                            </td>
+                            <td>
+                                {% if op.category %}<kbd>{{ op.category }}</kbd>{% else %}<small style="color: var(--pico-muted-color);">—</small>{% endif %}
+                                <br><small style="color: var(--pico-muted-color);">{{ op.status }}</small>
                             </td>
                             <td><kbd>{{ op.source }}</kbd></td>
                             <td><a href="{{ op.url }}" target="_blank" role="button" class="outline">Acessar</a></td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="4" style="text-align: center; padding: 2rem;">
-                                {% if q or source %}
+                            <td colspan="5" style="text-align: center; padding: 2rem;">
+                                {% if q or source or category %}
                                 Nenhuma oportunidade corresponde aos filtros aplicados.
                                 {% else %}
                                 Nenhuma oportunidade encontrada ainda no banco de dados.<br>
@@ -83,7 +95,7 @@
             <ul>
                 <li>
                     {% if page > 1 %}
-                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&order={{ order|urlencode }}&page={{ page - 1 }}" role="button" class="secondary">← Anterior</a>
+                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&page={{ page - 1 }}" role="button" class="secondary">← Anterior</a>
                     {% else %}
                     <a href="#" role="button" class="secondary" aria-disabled="true">← Anterior</a>
                     {% endif %}
@@ -95,7 +107,7 @@
             <ul>
                 <li>
                     {% if page < total_pages %}
-                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&order={{ order|urlencode }}&page={{ page + 1 }}" role="button" class="secondary">Próxima →</a>
+                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&page={{ page + 1 }}" role="button" class="secondary">Próxima →</a>
                     {% else %}
                     <a href="#" role="button" class="secondary" aria-disabled="true">Próxima →</a>
                     {% endif %}
