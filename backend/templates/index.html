@@ -65,6 +65,7 @@
                                 <strong>{{ op.title }}</strong><br>
                                 <small style="color: var(--pico-muted-color);">{{ op.description[:150] + '...' if op.description and op.description|length > 150 else op.description or '' }}</small>
                                 {% if op.deadline %}<br><small>⏰ Prazo: {{ op.deadline.strftime('%d/%m/%Y') }}</small>{% endif %}
+                                {% if op.value %}<br><small>💰 Valor: R$ {{ '%.2f'|format(op.value) }}</small>{% endif %}
                             </td>
                             <td>
                                 {% if op.category %}<kbd>{{ op.category }}</kbd>{% else %}<small style="color: var(--pico-muted-color);">—</small>{% endif %}

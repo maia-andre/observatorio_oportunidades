@@ -32,7 +32,7 @@ Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste r
   - `models.py` — modelo `Opportunity`
   - `templates/index.html` — painel (Jinja2 + PicoCSS)
 - `collectors/` — scripts autônomos de coleta, um subdiretório por tipo: `rss/`, `api/`, `html/`, `sitemap/`
-- `processing/` — processamento pós-coleta: `normalizer.py` (Normalização, Fase 1) e `rules.py` + `classifier.py` (Curadoria por regras, Fase 2)
+- `processing/` — processamento pós-coleta: `normalizer.py` (Normalização, Fase 1), `rules.py` + `classifier.py` (Curadoria por regras, Fase 2), `extractor.py` + `enrich.py` (extração de prazo/valor por regex — Fase 3-lite, **sem LLM**)
 - `database/` — arquivo SQLite local (ignorado pelo git)
 - `docs/` — documentação por fase (`arquitetura/`, `fase 0/`, `fase 1/`)
 - `run_pipeline.py` — orquestrador: roda coleta (RSS + API/Sitemap) + classificação num único comando (aceita `--reset`)
@@ -41,7 +41,7 @@ Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste r
 
 ## Modelo de dados (`Opportunity`)
 
-`id` (PK) · `title` · `description?` · `url` (**único e indexado — chave de deduplicação**) · `published_date?` · `source` · `category?` · `deadline?` (prazo) · `status` (default `novo`) · `collected_at`. Definido em `backend/models.py`. Os campos `category`/`deadline`/`status` são da Fase 1 e permanecem vazios/`novo` até a curadoria/classificação (Fase 2). O helper `utcnow()` em `models.py` substitui o depreciado `datetime.utcnow()`.
+`id` (PK) · `title` · `description?` · `url` (**único e indexado — chave de deduplicação**) · `published_date?` · `source` · `category?` · `deadline?` (prazo) · `value?` (valor em R$) · `status` (default `novo`) · `collected_at`. Definido em `backend/models.py`. Os campos `category`/`deadline`/`status` são da Fase 1 e permanecem vazios/`novo` até a curadoria/classificação (Fase 2). O helper `utcnow()` em `models.py` substitui o depreciado `datetime.utcnow()`.
 
 ## Como rodar (local, sem Docker)
 
