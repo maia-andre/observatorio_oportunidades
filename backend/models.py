@@ -32,3 +32,16 @@ class Opportunity(SQLModel, table=True):
     relevance_score: Optional[float] = Field(default=None, index=True)
     status: str = Field(default="novo", index=True)
     collected_at: datetime = Field(default_factory=utcnow)
+
+
+class MunicipalProfile(SQLModel, table=True):
+    """Perfil de um município para o matching de oportunidades (Etapa C).
+
+    `interests` lista as áreas de interesse (nomes de categorias e/ou palavras-chave)
+    separadas por vírgula — usadas pelo motor de matching para medir a aderência.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    uf: str = Field(index=True)
+    interests: str
+    population: Optional[int] = Field(default=None)
