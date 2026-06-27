@@ -68,8 +68,12 @@ def classify_pending() -> dict:
     resumo = {"classificado": 0, "nao_classificado": 0, "por_categoria": {}}
 
     with Session(engine) as session:
+        # Só classifica o que passou pela porta de relevância (status != "irrelevante").
         pendentes = session.exec(
-            select(Opportunity).where(Opportunity.category.is_(None))
+            select(Opportunity).where(
+                Opportunity.category.is_(None),
+                Opportunity.status != "irrelevante",
+            )
         ).all()
         print(f"Classificando {len(pendentes)} oportunidade(s) pendente(s)...")
 
