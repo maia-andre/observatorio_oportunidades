@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ op.title[:70] }} — Observatório</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        .container { margin-top: 2rem; max-width: 880px; }
+        .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1rem 0; }
+        .meta small { color: var(--pico-muted-color); }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <p><a href="/">← Voltar ao painel</a></p>
+        <article>
+            <header>
+                <hgroup>
+                    <h2>{{ op.title }}</h2>
+                    <p>
+                        <kbd>{{ op.source }}</kbd>
+                        {% if op.category %}<kbd>{{ op.category }}</kbd>{% endif %}
+                        {% if op.categories and ',' in op.categories %}{% for c in op.categories.split(',')[1:] %}<small> +{{ c }}</small>{% endfor %}{% endif %}
+                    </p>
+                </hgroup>
+            </header>
+
+            <div class="meta">
+                <div><small>⏰ Prazo</small><br><strong>{{ op.deadline.strftime('%d/%m/%Y') if op.deadline else '—' }}</strong></div>
+                <div><small>💰 Valor</small><br><strong>{{ 'R$ %.2f'|format(op.value) if op.value is not none else '—' }}</strong></div>
+                <div><small>📅 Publicado</small><br><strong>{{ op.published_date.strftime('%d/%m/%Y') if op.published_date else '—' }}</strong></div>
+                <div><small>Status</small><br><strong>{{ op.status }}</strong></div>
+            </div>
+
+            {% if op.description %}<p>{{ op.description }}</p>{% endif %}
+
+            <footer>
+                <a href="{{ op.url }}" target="_blank" rel="noopener" role="button">Acessar fonte original ↗</a>
+                <small style="color: var(--pico-muted-color);">
+                    Coletado em {{ op.collected_at.strftime('%d/%m/%Y') if op.collected_at else '—' }}
+                    · relevância {{ '%.2f'|format(op.relevance_score) if op.relevance_score is not none else '—' }}
+                </small>
+            </footer>
+        </article>
+    </main>
+</body>
+</html>

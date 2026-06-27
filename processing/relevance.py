@@ -35,6 +35,9 @@ TERMOS_MEDIOS = {  # vocabulário recorrente de oportunidades
     "inscricoes", "inscricao", "premio", "premiacao", "convenio", "bolsa", "bolsas",
     "financiamento", "fomento", "concurso", "selo", "certificacao", "acreditacao",
     "chamada", "patrocinio", "subvencao", "captacao de recursos", "prestacao de contas",
+    # Fontes estruturadas (PNCP / Portal da Transparência):
+    "emenda", "emenda parlamentar", "licitacao", "pregao", "registro de precos",
+    "credenciamento", "concorrencia",
 }
 TERMOS_FRACOS = {  # sugerem, mas não bastam sozinhos
     "programa", "oportunidade", "projeto", "recursos", "apoio", "iniciativa", "parceria",
@@ -60,8 +63,14 @@ def _normalize(texto: str) -> str:
 
 
 def score_relevance(title: str, description: Optional[str] = None,
-                    source: Optional[str] = None) -> float:
-    """Pontua o item em 0..1 somando sinais de oportunidade (saturado em 1.0)."""
+                    source: Optional[str] = None, value: Optional[float] = None,
+                    deadline=None) -> float:
+    """Pontua o item em 0..1 somando sinais de oportunidade (saturado em 1.0).
+
+    `value`/`deadline` são os campos já estruturados (quando existirem): fontes
+    como PNCP e emendas trazem valor/prazo nos CAMPOS, não no texto, então têm
+    prioridade; na ausência, cai para a extração por regex do próprio texto.
+    """
     texto = _normalize(f"{title or ''} {description or ''}")
     if not texto.strip():
         return 0.0
@@ -74,10 +83,10 @@ def score_relevance(title: str, description: Optional[str] = None,
     if any(t in texto for t in TERMOS_FRACOS):
         score += PESOS["fraco"]
 
-    # Sinais estruturais reaproveitando o extrator (valor em R$ / prazo).
-    if extract_max_value(texto) is not None:
+    # Sinais estruturais: o campo tem prioridade; o texto é só o fallback.
+    if (value is not None and value > 0) or extract_max_value(texto) is not None:
         score += PESOS["valor"]
-    if extract_deadline(texto) is not None:
+    if deadline is not None or extract_deadline(texto) is not None:
         score += PESOS["prazo"]
 
     if source in FONTES_CONFIAVEIS:
@@ -103,7 +112,7 @@ def apply_relevance(limiar: float = LIMIAR, rescore: bool = False) -> dict:
         itens = session.exec(stmt).all()
 
         for op in itens:
-            s = score_relevance(op.title, op.description, op.source)
+            s = score_relevance(op.title, op.description, op.source, op.value, op.deadline)
             op.relevance_score = s
             resumo["avaliados"] += 1
             if s < limiar:

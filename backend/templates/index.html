@@ -38,6 +38,18 @@
                     <option value="desc" {% if order != 'asc' %}selected{% endif %}>Mais recentes</option>
                     <option value="asc" {% if order == 'asc' %}selected{% endif %}>Mais antigas</option>
                 </select>
+                <select name="prazo" aria-label="Filtrar por prazo">
+                    <option value="">Qualquer prazo</option>
+                    <option value="com" {% if prazo == 'com' %}selected{% endif %}>Com prazo</option>
+                    <option value="30" {% if prazo == '30' %}selected{% endif %}>Prazo ≤ 30 dias</option>
+                    <option value="90" {% if prazo == '90' %}selected{% endif %}>Prazo ≤ 90 dias</option>
+                </select>
+                <select name="valor" aria-label="Filtrar por valor">
+                    <option value="">Qualquer valor</option>
+                    <option value="com" {% if valor == 'com' %}selected{% endif %}>Com valor</option>
+                    <option value="100mil" {% if valor == '100mil' %}selected{% endif %}>≥ R$ 100 mil</option>
+                    <option value="1mi" {% if valor == '1mi' %}selected{% endif %}>≥ R$ 1 mi</option>
+                </select>
                 <label style="display: flex; align-items: center; gap: .4rem;">
                     <input type="checkbox" name="relevancia" value="todas" {% if relevancia == 'todas' %}checked{% endif %}>
                     <small>Incluir irrelevantes</small>
@@ -48,7 +60,7 @@
 
         <article>
             <header>
-                <strong>{{ total }}</strong> oportunidade(s) encontrada(s){% if q or source or category %} <small>(filtrado)</small>{% endif %}
+                <strong>{{ total }}</strong> oportunidade(s) encontrada(s){% if q or source or category or prazo or valor %} <small>(filtrado)</small>{% endif %}{% if usando_fts %} <small>· ordenado por relevância 🔎</small>{% endif %}
             </header>
             <div class="overflow-auto">
                 <table class="striped">
@@ -66,13 +78,14 @@
                         <tr>
                             <td>{{ op.published_date.strftime('%d/%m/%Y') if op.published_date else 'N/A' }}</td>
                             <td>
-                                <strong>{{ op.title }}</strong><br>
+                                <a href="/opportunity/{{ op.id }}"><strong>{{ op.title }}</strong></a><br>
                                 <small style="color: var(--pico-muted-color);">{{ op.description[:150] + '...' if op.description and op.description|length > 150 else op.description or '' }}</small>
                                 {% if op.deadline %}<br><small>⏰ Prazo: {{ op.deadline.strftime('%d/%m/%Y') }}</small>{% endif %}
                                 {% if op.value %}<br><small>💰 Valor: R$ {{ '%.2f'|format(op.value) }}</small>{% endif %}
                             </td>
                             <td>
                                 {% if op.category %}<kbd>{{ op.category }}</kbd>{% else %}<small style="color: var(--pico-muted-color);">—</small>{% endif %}
+                                {% if op.categories and ',' in op.categories %}{% for c in op.categories.split(',')[1:] %}<small style="color: var(--pico-muted-color);"> +{{ c }}</small>{% endfor %}{% endif %}
                                 <br><small style="color: var(--pico-muted-color);">{{ op.status }}</small>
                             </td>
                             <td><kbd>{{ op.source }}</kbd></td>
@@ -100,7 +113,7 @@
             <ul>
                 <li>
                     {% if page > 1 %}
-                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&relevancia={{ relevancia|urlencode }}&page={{ page - 1 }}" role="button" class="secondary">← Anterior</a>
+                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&relevancia={{ relevancia|urlencode }}&prazo={{ prazo|urlencode }}&valor={{ valor|urlencode }}&page={{ page - 1 }}" role="button" class="secondary">← Anterior</a>
                     {% else %}
                     <a href="#" role="button" class="secondary" aria-disabled="true">← Anterior</a>
                     {% endif %}
@@ -112,7 +125,7 @@
             <ul>
                 <li>
                     {% if page < total_pages %}
-                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&relevancia={{ relevancia|urlencode }}&page={{ page + 1 }}" role="button" class="secondary">Próxima →</a>
+                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&relevancia={{ relevancia|urlencode }}&prazo={{ prazo|urlencode }}&valor={{ valor|urlencode }}&page={{ page + 1 }}" role="button" class="secondary">Próxima →</a>
                     {% else %}
                     <a href="#" role="button" class="secondary" aria-disabled="true">Próxima →</a>
                     {% endif %}

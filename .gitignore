@@ -6,3 +6,9 @@ __pycache__/
 # Banco SQLite local (Fase 0)
 *.db
 *.sqlite3
+
+# Segredos / variáveis de ambiente — NUNCA versionar chaves de API
+.env
+.env.*
+!.env.example
+secrets/

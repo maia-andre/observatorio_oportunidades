@@ -16,12 +16,13 @@ from collections import OrderedDict
 # explícita a intenção de "ordem = prioridade".
 RULES = OrderedDict([
     ("Emendas",          ["emenda", "emenda parlamentar"]),
-    ("Premiações",       ["premio", "premiacao", "premiacoes", "reconhecimento", "award", "prize"]),
+    ("Premiações",       ["premio", "premiacao", "premiacoes", "reconhecimento", "award", "prize", "concurso"]),
     ("Certificações",    ["certificacao", "certificado", "selo", "acreditacao", "credenciamento"]),
     ("Saúde",            ["saude", "hospital", "ubs", "sanitaria", "vacina", "epidem", "diagnostico",
                           "laboratorial", "fiocruz", "medic", "pediatria", "doenca", "sorolog", "virus", "viral"]),
     ("Educação",         ["educacao", "escola", "ensino", "professor", "aluno", "bolsa", "estagi",
-                          "mestrado", "pos-graduacao", "graduacao", "diploma", "docente", "extensao"]),
+                          "mestrado", "pos-graduacao", "graduacao", "diploma", "docente", "extensao",
+                          "congresso", "capacitacao", "qualificacao", "seminario", "workshop", "oficina"]),
     ("Sustentabilidade", ["sustentavel", "sustentabilidade", "sustainability", "ambiental", "ambientais",
                           "climatic", "clima", "residuos", "reciclag", "energia limpa", "ibama", "economia circular",
                           "pesqueiro", "defeso"]),
@@ -36,3 +37,10 @@ RULES = OrderedDict([
     # genéricos que não casaram com uma categoria mais específica acima.
     ("Convênios",        ["convenio", "chamamento", "chamada publica", "chamada aberta", "termo de fomento", "edital", "chamada"]),
 ])
+
+# Termos negativos (B1b): vetam a categoria inteira mesmo que uma palavra-chave
+# tenha casado — úteis contra falsos-positivos. categoria -> termos (sem acento).
+NEGATIVES = {
+    # "concurso público" (servidores) casa "concurso" mas não é premiação.
+    "Premiações": ["concurso publico"],
+}
