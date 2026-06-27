@@ -6,6 +6,7 @@ feedparser==6.0.11
 requests==2.31.0
 beautifulsoup4==4.12.3
 lxml==5.2.1
+pymupdf==1.27.2.3        # extração de texto de PDFs (processing/enrich.py)
 
 # Driver PostgreSQL — OPCIONAL, necessário apenas se usar DATABASE_URL=postgresql://...
 # O banco padrão da Fase 0 é SQLite (já incluso no Python), então pode ser ignorado.
