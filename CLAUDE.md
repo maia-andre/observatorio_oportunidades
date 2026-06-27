@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste repositório. Documentação canônica complementar em `README.md` e `docs/`.
 
 ## Visão geral
@@ -45,18 +47,19 @@ Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste r
 
 ## Como rodar (local, sem Docker)
 
-Use o `venv` já existente na raiz. Execute sempre **a partir da raiz do projeto** (os caminhos relativos dependem disso).
+Execute sempre **a partir da raiz do projeto** (os caminhos relativos dependem disso). Os comandos abaixo usam bash (Linux/macOS); no Windows/PowerShell, troque a ativação do venv por `venv\Scripts\activate` e `export VAR=...` por `$env:VAR = "..."`.
 
-```powershell
-# 1) ativar venv e instalar dependências
-venv\Scripts\activate
+```bash
+# 1) criar/ativar venv e instalar dependências
+python3 -m venv venv        # só na primeira vez (o venv é ignorado pelo git)
+source venv/bin/activate     # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # 2) subir o painel (cria o banco e as tabelas no 1º boot)
 uvicorn backend.main:app --reload
 # painel em http://localhost:8000
 
-# 3) em outro terminal (venv ativo), rodar a pipeline completa (coleta + classificação)
+# 3) em outro terminal (venv ativo), rodar a pipeline (coleta RSS + API/Sitemap + classificação)
 python run_pipeline.py
 #    use --reset para reclassificar tudo do zero após alterar as regras:
 python run_pipeline.py --reset
@@ -65,10 +68,16 @@ python run_pipeline.py --reset
 python collectors/rss/rss_collector.py
 python collectors/api/api_collector.py
 python processing/classifier.py          # aceita --reset
+
+# 4) enriquecimento Fase 3-lite (prazo/valor por regex, SEM LLM) — NÃO faz parte do run_pipeline.py.
+#    Baixa o conteúdo de cada link e só processa itens ainda sem deadline/value (re-executável).
+python processing/enrich.py                # até 20 itens
+python processing/enrich.py --limit=10 --source=Capta
 ```
 
 > **Opcional — PostgreSQL:** `docker-compose up -d` e, antes de iniciar o servidor/coletores, defina a variável de ambiente:
-> `$env:DATABASE_URL = "postgresql://observatorio:observatorio_password@localhost:5432/observatorio_db"`
+> `export DATABASE_URL="postgresql://observatorio:observatorio_password@localhost:5432/observatorio_db"`
+> (Windows/PowerShell: `$env:DATABASE_URL = "postgresql://..."`)
 
 ## Banco de dados
 

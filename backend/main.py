@@ -31,6 +31,7 @@ def read_root(
     source: str = "",
     category: str = "",
     order: str = "desc",
+    relevancia: str = "relevantes",
     page: int = 1,
 ):
     """Painel com busca, filtro por fonte/categoria, ordenação por data e paginação."""
@@ -70,6 +71,11 @@ def read_root(
             statement = statement.where(Opportunity.category == category)
             count_statement = count_statement.where(Opportunity.category == category)
 
+        # Por padrão, oculta o que a porta de relevância marcou como "irrelevante".
+        if relevancia != "todas":
+            statement = statement.where(Opportunity.status != "irrelevante")
+            count_statement = count_statement.where(Opportunity.status != "irrelevante")
+
         # Ordenação por data de publicação (padrão: mais recentes primeiro).
         if order == "asc":
             statement = statement.order_by(Opportunity.published_date.asc())
@@ -100,5 +106,6 @@ def read_root(
                 "source": source,
                 "category": category,
                 "order": order,
+                "relevancia": relevancia,
             },
         )

@@ -38,6 +38,10 @@
                     <option value="desc" {% if order != 'asc' %}selected{% endif %}>Mais recentes</option>
                     <option value="asc" {% if order == 'asc' %}selected{% endif %}>Mais antigas</option>
                 </select>
+                <label style="display: flex; align-items: center; gap: .4rem;">
+                    <input type="checkbox" name="relevancia" value="todas" {% if relevancia == 'todas' %}checked{% endif %}>
+                    <small>Incluir irrelevantes</small>
+                </label>
                 <button type="submit">Filtrar</button>
             </div>
         </form>
@@ -96,7 +100,7 @@
             <ul>
                 <li>
                     {% if page > 1 %}
-                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&page={{ page - 1 }}" role="button" class="secondary">← Anterior</a>
+                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&relevancia={{ relevancia|urlencode }}&page={{ page - 1 }}" role="button" class="secondary">← Anterior</a>
                     {% else %}
                     <a href="#" role="button" class="secondary" aria-disabled="true">← Anterior</a>
                     {% endif %}
@@ -108,7 +112,7 @@
             <ul>
                 <li>
                     {% if page < total_pages %}
-                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&page={{ page + 1 }}" role="button" class="secondary">Próxima →</a>
+                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&relevancia={{ relevancia|urlencode }}&page={{ page + 1 }}" role="button" class="secondary">Próxima →</a>
                     {% else %}
                     <a href="#" role="button" class="secondary" aria-disabled="true">Próxima →</a>
                     {% endif %}

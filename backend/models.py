@@ -24,5 +24,8 @@ class Opportunity(SQLModel, table=True):
     category: Optional[str] = Field(default=None, index=True)
     deadline: Optional[datetime] = None  # prazo da oportunidade (extraível na Fase 3-lite)
     value: Optional[float] = Field(default=None)  # valor/teto em R$, quando extraível
+    # Score 0..1 da porta de relevância (Etapa A): quão "oportunidade" o item parece.
+    # None = ainda não avaliado; itens abaixo do limiar recebem status "irrelevante".
+    relevance_score: Optional[float] = Field(default=None, index=True)
     status: str = Field(default="novo", index=True)
     collected_at: datetime = Field(default_factory=utcnow)

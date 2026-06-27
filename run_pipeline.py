@@ -1,19 +1,24 @@
-"""Orquestrador da pipeline do Observatório: coleta seguida de classificação.
+"""Orquestrador da pipeline: coleta → relevância → classificação → enriquecimento.
 
-Roda, em sequência e num único comando: coleta RSS → coleta API/Sitemap →
-classificação por regras. Útil para agendamento (cron/CI). Cada etapa já
-garante o schema (`create_db_and_tables`), então funciona sem o servidor no ar.
+Roda, em sequência e num único comando: coleta RSS + PNCP → porta de relevância →
+classificação por regras → enriquecimento (prazo/valor via deep-fetch, incl. PDF).
+Útil para agendamento (cron/CI). Cada etapa garante o schema, então funciona sem o
+servidor no ar.
 
 Uso (a partir da raiz do projeto):
-    python run_pipeline.py            # coleta + classifica os pendentes
-    python run_pipeline.py --reset    # zera a classificação antes (reclassifica tudo)
+    python run_pipeline.py            # coleta + relevância + classifica + enriquece
+    python run_pipeline.py --reset    # zera classificação/relevância antes (reprocessa tudo)
+
+Obs.: fontes que exigem credencial (Portal da Transparência) entram quando houver chave.
 """
 
 import sys
 
 from collectors.rss.rss_collector import collect_rss
-from collectors.api.api_collector import collect_api
+from collectors.api.pncp_collector import collect_pncp
+from processing.relevance import apply_relevance
 from processing.classifier import classify_pending, reset_classification
+from processing.enrich import enrich
 
 
 def run(reset: bool = False):
@@ -21,21 +26,31 @@ def run(reset: bool = False):
     print("PIPELINE - Observatório de Oportunidades Institucionais")
     print("=" * 60)
 
-    print("\n[1/3] Coleta RSS")
+    print("\n[1/5] Coleta RSS")
     collect_rss()
 
-    print("\n[2/3] Coleta API/Sitemap")
-    collect_api()
+    print("\n[2/5] Coleta PNCP (editais com propostas abertas)")
+    collect_pncp()
 
-    print("\n[3/3] Classificação por regras")
+    # No reset, zera a classificação ANTES de re-pontuar a relevância — senão o
+    # reset (status->"novo") apagaria a marcação de irrelevante recém-feita.
     if reset:
         n = reset_classification()
-        print(f"  (classificação zerada em {n} registro(s))")
-    resumo = classify_pending()
+        print(f"\n  (classificação zerada em {n} registro(s))")
 
-    print(f"\n> Classificadas: {resumo['classificado']} | Não classificadas: {resumo['nao_classificado']}")
+    print("\n[3/5] Porta de relevância")
+    rel = apply_relevance(rescore=reset)
+    print(f"  Relevantes: {rel['relevante']} | Irrelevantes: {rel['irrelevante']} "
+          f"(avaliados: {rel['avaliados']})")
+
+    print("\n[4/5] Classificação por regras")
+    resumo = classify_pending()
+    print(f"  Classificadas: {resumo['classificado']} | Não classificadas: {resumo['nao_classificado']}")
     for cat, n in sorted(resumo["por_categoria"].items(), key=lambda x: -x[1]):
         print(f"   - {cat}: {n}")
+
+    print("\n[5/5] Enriquecimento (prazo/valor via deep-fetch + PDF)")
+    enrich(limit=50)
 
 
 if __name__ == "__main__":

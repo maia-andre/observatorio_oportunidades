@@ -16,6 +16,11 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 
+try:
+    import fitz  # PyMuPDF — extração de texto de PDFs
+except ImportError:
+    fitz = None
+
 # Adiciona a raiz do projeto ao sys.path para importar o backend
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -27,17 +32,39 @@ from processing.extractor import extract_deadline, extract_max_value
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ObservatorioBot/1.0"}
 
 
-def _fetch_text(url: str, timeout: int = 15):
-    """Baixa a página e devolve o texto do **conteúdo principal**.
+def _extract_pdf_text(content: bytes, max_paginas: int = 20) -> str:
+    """Texto das primeiras páginas de um PDF via PyMuPDF (vazio se indisponível)."""
+    if fitz is None:
+        return ""
+    try:
+        doc = fitz.open(stream=content, filetype="pdf")
+    except Exception:
+        return ""
+    partes = []
+    for i, page in enumerate(doc):
+        if i >= max_paginas:
+            break
+        partes.append(page.get_text())
+    doc.close()
+    return " ".join(partes)
 
-    Remove script/style e blocos estruturais (nav/header/footer/aside) e prefere
-    `<main>`/`<article>` ao `<body>` inteiro — isso reduz a contaminação por
-    boilerplate (menus, rodapés, "editais relacionados") que, na extração ingênua
-    de página inteira, fazia páginas distintas devolverem o mesmo valor/prazo.
+
+def _fetch_text(url: str, timeout: int = 15):
+    """Baixa o link e devolve o texto do **conteúdo principal** (HTML ou PDF).
+
+    Editais costumam ser PDF: quando o conteúdo é PDF (Content-Type ou extensão),
+    extrai o texto com PyMuPDF. Para HTML, remove script/style e blocos estruturais
+    (nav/header/footer/aside) e prefere `<main>`/`<article>` ao `<body>` inteiro —
+    reduz a contaminação por boilerplate (menus, rodapés, "editais relacionados").
     """
     resp = requests.get(url, headers=HEADERS, timeout=timeout)
     if resp.status_code != 200:
         return None
+
+    ctype = resp.headers.get("Content-Type", "").lower()
+    if "application/pdf" in ctype or url.lower().split("?")[0].endswith(".pdf"):
+        return _extract_pdf_text(resp.content)
+
     soup = BeautifulSoup(resp.content, "html.parser")
     for tag in soup(["script", "style", "noscript", "nav", "header", "footer", "aside"]):
         tag.decompose()
@@ -50,7 +77,8 @@ def enrich(limit: int = 20, source: str = None, only_missing: bool = True) -> in
     atualizados = 0
 
     with Session(engine) as session:
-        stmt = select(Opportunity)
+        # Só enriquece itens relevantes (não desperdiça fetch com o que foi filtrado).
+        stmt = select(Opportunity).where(Opportunity.status != "irrelevante")
         if only_missing:
             stmt = stmt.where(Opportunity.deadline.is_(None), Opportunity.value.is_(None))
         if source:
