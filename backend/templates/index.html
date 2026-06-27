@@ -1,145 +1,150 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel - Observatório de Oportunidades</title>
-    <!-- PicoCSS para estilização simples e moderna sem escrever CSS customizado -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <style>
-        .container { margin-top: 2rem; max-width: 1200px; }
-        .filtros { margin-bottom: 1.5rem; }
-        .paginacao { display: flex; justify-content: space-between; align-items: center; }
-        .paginacao ul { margin: 0; }
-    </style>
-</head>
-<body>
-    <main class="container">
-        <h1>Observatório de Oportunidades Institucionais</h1>
-        <p>Fase 1 - Radar Institucional</p>
+{% extends "base.html" %}
+{% block title %}Painel — Observatório de Oportunidades{% endblock %}
 
-        <!-- Filtros: busca textual, fonte e ordenação (GET preserva o estado na URL) -->
-        <form method="get" role="search" class="filtros">
-            <div class="grid">
-                <input type="search" name="q" placeholder="Buscar por título ou descrição..." value="{{ q }}">
-                <select name="source" aria-label="Filtrar por fonte">
-                    <option value="">Todas as fontes</option>
-                    {% for s in sources %}
-                    <option value="{{ s }}" {% if s == source %}selected{% endif %}>{{ s }}</option>
-                    {% endfor %}
-                </select>
-                <select name="category" aria-label="Filtrar por categoria">
-                    <option value="">Todas as categorias</option>
-                    {% for c in categories %}
-                    <option value="{{ c }}" {% if c == category %}selected{% endif %}>{{ c }}</option>
-                    {% endfor %}
-                </select>
-                <select name="order" aria-label="Ordenar por data">
-                    <option value="desc" {% if order != 'asc' %}selected{% endif %}>Mais recentes</option>
-                    <option value="asc" {% if order == 'asc' %}selected{% endif %}>Mais antigas</option>
-                </select>
-                <select name="prazo" aria-label="Filtrar por prazo">
-                    <option value="">Qualquer prazo</option>
-                    <option value="com" {% if prazo == 'com' %}selected{% endif %}>Com prazo</option>
-                    <option value="30" {% if prazo == '30' %}selected{% endif %}>Prazo ≤ 30 dias</option>
-                    <option value="90" {% if prazo == '90' %}selected{% endif %}>Prazo ≤ 90 dias</option>
-                </select>
-                <select name="valor" aria-label="Filtrar por valor">
-                    <option value="">Qualquer valor</option>
-                    <option value="com" {% if valor == 'com' %}selected{% endif %}>Com valor</option>
-                    <option value="100mil" {% if valor == '100mil' %}selected{% endif %}>≥ R$ 100 mil</option>
-                    <option value="1mi" {% if valor == '1mi' %}selected{% endif %}>≥ R$ 1 mi</option>
-                </select>
-                <select name="municipio" aria-label="Aderência ao município">
-                    <option value="0">Sem município</option>
-                    {% for p in profiles %}
-                    <option value="{{ p.id }}" {% if p.id == municipio %}selected{% endif %}>🎯 {{ p.name }}/{{ p.uf }}</option>
-                    {% endfor %}
-                </select>
-                <label style="display: flex; align-items: center; gap: .4rem;">
-                    <input type="checkbox" name="relevancia" value="todas" {% if relevancia == 'todas' %}checked{% endif %}>
-                    <small>Incluir irrelevantes</small>
-                </label>
-                <button type="submit">Filtrar</button>
-            </div>
-        </form>
+{% block content %}
+<!-- Filtros: busca em destaque + grade de campos rotulados (GET preserva o estado na URL) -->
+<form method="get" role="search" class="filtros card">
+    <div class="busca-row">
+        <input type="search" name="q" placeholder="Buscar por título ou descrição…" value="{{ q }}" aria-label="Buscar">
+        <button type="submit" class="btn">Buscar</button>
+    </div>
+    <div class="filtros-grid">
+        <div class="field">
+            <label for="f-source">Fonte</label>
+            <select id="f-source" name="source" onchange="this.form.submit()">
+                <option value="">Todas as fontes</option>
+                {% for s in sources %}
+                <option value="{{ s }}" {% if s == source %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label for="f-cat">Categoria</label>
+            <select id="f-cat" name="category" onchange="this.form.submit()">
+                <option value="">Todas as categorias</option>
+                {% for c in categories %}
+                <option value="{{ c }}" {% if c == category %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label for="f-mun">Município (aderência)</label>
+            <select id="f-mun" name="municipio" onchange="this.form.submit()">
+                <option value="0">Nenhum</option>
+                {% for p in profiles %}
+                <option value="{{ p.id }}" {% if p.id == municipio %}selected{% endif %}>{{ p.name }}/{{ p.uf }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label for="f-prazo">Prazo</label>
+            <select id="f-prazo" name="prazo" onchange="this.form.submit()">
+                <option value="">Qualquer prazo</option>
+                <option value="com" {% if prazo == 'com' %}selected{% endif %}>Com prazo</option>
+                <option value="30" {% if prazo == '30' %}selected{% endif %}>Encerra em ≤ 30 dias</option>
+                <option value="90" {% if prazo == '90' %}selected{% endif %}>Encerra em ≤ 90 dias</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="f-valor">Valor</label>
+            <select id="f-valor" name="valor" onchange="this.form.submit()">
+                <option value="">Qualquer valor</option>
+                <option value="com" {% if valor == 'com' %}selected{% endif %}>Com valor</option>
+                <option value="100mil" {% if valor == '100mil' %}selected{% endif %}>≥ R$ 100 mil</option>
+                <option value="1mi" {% if valor == '1mi' %}selected{% endif %}>≥ R$ 1 milhão</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="f-order">Ordenar</label>
+            <select id="f-order" name="order" onchange="this.form.submit()">
+                <option value="desc" {% if order != 'asc' %}selected{% endif %}>Mais recentes</option>
+                <option value="asc" {% if order == 'asc' %}selected{% endif %}>Mais antigas</option>
+            </select>
+        </div>
+        <div class="field check">
+            <input type="checkbox" id="f-rel" name="relevancia" value="todas" {% if relevancia == 'todas' %}checked{% endif %} onchange="this.form.submit()">
+            <label for="f-rel">Incluir irrelevantes</label>
+        </div>
+    </div>
+</form>
 
-        <article>
-            <header>
-                <strong>{{ total }}</strong> oportunidade(s) encontrada(s){% if q or source or category or prazo or valor or municipio %} <small>(filtrado)</small>{% endif %}{% if municipio %} <small>· ordenado por aderência 🎯</small>{% elif usando_fts %} <small>· ordenado por relevância 🔎</small>{% endif %}
-            </header>
-            <div class="overflow-auto">
-                <table class="striped">
-                    <thead>
-                        <tr>
-                            <th scope="col" style="width: 12%">Data Pub.</th>
-                            <th scope="col" style="width: 43%">Título</th>
-                            <th scope="col" style="width: 15%">Categoria</th>
-                            <th scope="col" style="width: 16%">Fonte</th>
-                            <th scope="col" style="width: 14%">Ação</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for op in opportunities %}
-                        <tr>
-                            <td>{{ op.published_date.strftime('%d/%m/%Y') if op.published_date else 'N/A' }}</td>
-                            <td>
-                                <a href="/opportunity/{{ op.id }}"><strong>{{ op.title }}</strong></a><br>
-                                <small style="color: var(--pico-muted-color);">{{ op.description[:150] + '...' if op.description and op.description|length > 150 else op.description or '' }}</small>
-                                {% if op.deadline %}<br><small>⏰ Prazo: {{ op.deadline.strftime('%d/%m/%Y') }}</small>{% endif %}
-                                {% if op.value %}<br><small>💰 Valor: R$ {{ '%.2f'|format(op.value) }}</small>{% endif %}
-                                {% if matches.get(op.id) %}<br><small>🎯 <strong>Aderência: {{ matches[op.id][0] }}</strong> — {{ matches[op.id][1]|join(' · ') }}</small>{% endif %}
-                            </td>
-                            <td>
-                                {% if op.category %}<kbd>{{ op.category }}</kbd>{% else %}<small style="color: var(--pico-muted-color);">—</small>{% endif %}
-                                {% if op.categories and ',' in op.categories %}{% for c in op.categories.split(',')[1:] %}<small style="color: var(--pico-muted-color);"> +{{ c }}</small>{% endfor %}{% endif %}
-                                <br><small style="color: var(--pico-muted-color);">{{ op.status }}</small>
-                            </td>
-                            <td><kbd>{{ op.source }}</kbd></td>
-                            <td><a href="{{ op.url }}" target="_blank" role="button" class="outline">Acessar</a></td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" style="text-align: center; padding: 2rem;">
-                                {% if q or source or category %}
-                                Nenhuma oportunidade corresponde aos filtros aplicados.
-                                {% else %}
-                                Nenhuma oportunidade encontrada ainda no banco de dados.<br>
-                                Execute os scripts em <code>collectors/</code> para povoar o banco.
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </article>
+<div class="resultados-bar">
+    <span class="total">{{ total }} oportunidade(s)</span>
+    <span>
+        {% if q or source or category or prazo or valor or municipio %}<span class="tag">filtrado</span>{% endif %}
+        {% if municipio %}<span class="tag">ordenado por aderência</span>{% elif usando_fts %}<span class="tag">ordenado por relevância</span>{% endif %}
+    </span>
+</div>
 
-        {% if total_pages > 1 %}
-        <nav class="paginacao">
-            <ul>
-                <li>
-                    {% if page > 1 %}
-                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&relevancia={{ relevancia|urlencode }}&prazo={{ prazo|urlencode }}&valor={{ valor|urlencode }}&municipio={{ municipio }}&page={{ page - 1 }}" role="button" class="secondary">← Anterior</a>
-                    {% else %}
-                    <a href="#" role="button" class="secondary" aria-disabled="true">← Anterior</a>
+<div class="card tabela">
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 11%">Publicação</th>
+                <th style="width: 47%">Oportunidade</th>
+                <th style="width: 16%">Categoria</th>
+                <th style="width: 14%">Fonte</th>
+                <th style="width: 12%"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for op in opportunities %}
+            <tr>
+                <td>{{ op.published_date.strftime('%d/%m/%Y') if op.published_date else '—' }}</td>
+                <td>
+                    <a href="/opportunity/{{ op.id }}" class="titulo-op">{{ op.title }}</a>
+                    <div class="meta-linha">{{ op.description[:140] + '…' if op.description and op.description|length > 140 else op.description or '' }}</div>
+                    {% if op.deadline or op.value %}
+                    <div class="meta-linha">
+                        {% if op.deadline %}⏰ Prazo: <strong>{{ op.deadline.strftime('%d/%m/%Y') }}</strong>{% endif %}
+                        {% if op.deadline and op.value %} &nbsp;·&nbsp; {% endif %}
+                        {% if op.value %}💰 R$ {{ '%.2f'|format(op.value) }}{% endif %}
+                    </div>
                     {% endif %}
-                </li>
-            </ul>
-            <ul>
-                <li><small>Página {{ page }} de {{ total_pages }}</small></li>
-            </ul>
-            <ul>
-                <li>
-                    {% if page < total_pages %}
-                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&relevancia={{ relevancia|urlencode }}&prazo={{ prazo|urlencode }}&valor={{ valor|urlencode }}&municipio={{ municipio }}&page={{ page + 1 }}" role="button" class="secondary">Próxima →</a>
-                    {% else %}
-                    <a href="#" role="button" class="secondary" aria-disabled="true">Próxima →</a>
+                    {% if matches.get(op.id) %}
+                    <div class="aderencia">
+                        <span class="score" style="background: {% if matches[op.id][0] >= 70 %}#0b6b3d{% elif matches[op.id][0] >= 40 %}#1565a6{% else %}#7a8aa0{% endif %};">{{ matches[op.id][0] }}</span>
+                        <span class="just">aderência — {{ matches[op.id][1]|join(' · ') }}</span>
+                    </div>
                     {% endif %}
-                </li>
-            </ul>
-        </nav>
-        {% endif %}
-    </main>
-</body>
-</html>
+                </td>
+                <td>
+                    {% if op.category %}<span class="chip">{{ op.category }}</span>{% else %}<span style="color:#8190a0;">—</span>{% endif %}
+                    {% if op.categories and ',' in op.categories %}{% for c in op.categories.split(',')[1:] %}<span class="chip-sec">{{ c }}</span>{% endfor %}{% endif %}
+                    <div class="status-tag">{{ op.status }}</div>
+                </td>
+                <td>{{ op.source }}</td>
+                <td><a href="{{ op.url }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">Acessar ↗</a></td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 40px; color: #5b6b7b;">
+                    {% if q or source or category or prazo or valor or municipio %}
+                    Nenhuma oportunidade corresponde aos filtros aplicados.
+                    {% else %}
+                    Nenhuma oportunidade no banco ainda. Rode <code>python run_pipeline.py</code> para povoar.
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if total_pages > 1 %}
+{% set qs = "q=" ~ q|urlencode ~ "&source=" ~ source|urlencode ~ "&category=" ~ category|urlencode ~ "&order=" ~ order|urlencode ~ "&relevancia=" ~ relevancia|urlencode ~ "&prazo=" ~ prazo|urlencode ~ "&valor=" ~ valor|urlencode ~ "&municipio=" ~ municipio %}
+<nav class="paginacao">
+    {% if page > 1 %}
+    <a href="?{{ qs }}&page={{ page - 1 }}" class="btn btn-outline btn-sm">← Anterior</a>
+    {% else %}
+    <span class="btn btn-outline btn-sm disabled">← Anterior</span>
+    {% endif %}
+    <span class="pg-info">Página {{ page }} de {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="?{{ qs }}&page={{ page + 1 }}" class="btn btn-outline btn-sm">Próxima →</a>
+    {% else %}
+    <span class="btn btn-outline btn-sm disabled">Próxima →</span>
+    {% endif %}
+</nav>
+{% endif %}
+{% endblock %}
