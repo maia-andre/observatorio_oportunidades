@@ -8,8 +8,9 @@ from sqlmodel import Session, select
 from sqlalchemy import func, or_
 
 from backend.database import create_db_and_tables, engine
-from backend.models import Opportunity
+from backend.models import Opportunity, MunicipalProfile
 from backend.search import setup_fts, search_ranked_ids
+from processing.matching import rank_opportunities
 
 # Quantidade de oportunidades exibidas por página no painel.
 PAGE_SIZE = 20
@@ -37,6 +38,7 @@ def read_root(
     relevancia: str = "relevantes",
     prazo: str = "",
     valor: str = "",
+    municipio: int = 0,
     page: int = 1,
 ):
     """Painel com busca full-text (FTS5/BM25), filtros, ordenação e paginação."""
@@ -53,6 +55,9 @@ def read_root(
             .where(Opportunity.category.is_not(None))
             .distinct()
             .order_by(Opportunity.category)
+        ).all()
+        profiles = session.exec(
+            select(MunicipalProfile).order_by(MunicipalProfile.name)
         ).all()
 
         # Filtros comuns (fonte/categoria/relevância), aplicáveis a qualquer query.
@@ -86,8 +91,29 @@ def read_root(
         # devolve None se não der para usar FTS (não-SQLite/índice ausente) → cai no LIKE.
         ranked_ids = search_ranked_ids(engine, q) if q else None
         usando_fts = ranked_ids is not None
+        profile = session.get(MunicipalProfile, municipio) if municipio else None
 
-        if usando_fts:
+        matches = {}  # op.id -> (score, justificativa), preenchido no modo aderência
+        if profile:
+            # Modo aderência: ranqueia por score de matching ao município (paginação em Python).
+            base = aplica_filtros(select(Opportunity))
+            if ranked_ids is not None:        # busca textual ativa: restringe aos hits do FTS
+                base = base.where(Opportunity.id.in_(ranked_ids))
+            elif q:                            # FTS indisponível: fallback LIKE
+                termo = f"%{q}%"
+                base = base.where(or_(
+                    Opportunity.title.ilike(termo),
+                    Opportunity.description.ilike(termo),
+                ))
+            ranqueadas = rank_opportunities(profile, session.exec(base).all())
+            total = len(ranqueadas)
+            total_pages = max(1, math.ceil(total / PAGE_SIZE))
+            page = min(page, total_pages)
+            offset = (page - 1) * PAGE_SIZE
+            pagina = ranqueadas[offset:offset + PAGE_SIZE]
+            opportunities = [op for op, _, _ in pagina]
+            matches = {op.id: (s, j) for op, s, j in pagina}
+        elif usando_fts:
             # Caminho FTS: ordena por relevância (BM25). Como o conjunto é pequeno,
             # aplica os demais filtros e pagina em Python, preservando a ordem do rank.
             if ranked_ids:
@@ -146,6 +172,9 @@ def read_root(
                 "relevancia": relevancia,
                 "prazo": prazo,
                 "valor": valor,
+                "municipio": municipio,
+                "profiles": profiles,
+                "matches": matches,
                 "usando_fts": usando_fts,
             },
         )
