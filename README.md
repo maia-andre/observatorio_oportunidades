@@ -24,6 +24,8 @@ A arquitetura foi inspirada em sistemas modernos de curadoria de informação, e
 
 O objetivo não é apenas realizar scraping de páginas, mas criar uma plataforma evolutiva de inteligência institucional.
 
+> **Estado de implementação (Jun/2026):** o backend entrega, **sem LLM** (100% determinístico), um pipeline ponta a ponta — coleta (RSS + PNCP + Portal da Transparência) → relevância → classificação ponderada (multi-rótulo) → enriquecimento (regex + PDF) → busca **FTS5** → **matching municipal** (aderência oportunidade × município). Fases 1, 2 e 4 (PoC) concluídas; a Fase 3 foi entregue na variante "lite" (sem IA). Detalhes operacionais em `CLAUDE.md`.
+
 ---
 
 # Visão Arquitetural
