@@ -87,10 +87,10 @@ def _get(params, tentativas=3):
 
 
 def collect_pncp(limite_por_modalidade: int = LIMITE_POR_MODALIDADE,
-                 dias_janela: int = DIAS_JANELA) -> int:
+                 dias_janela: int = DIAS_JANELA, uf: str = None) -> int:
     data_final = (datetime.now() + timedelta(days=dias_janela)).strftime("%Y%m%d")
     print(f"Iniciando coleta PNCP (encerramento até {data_final}, "
-          f"{len(MODALIDADES)} modalidade(s))...")
+          f"{len(MODALIDADES)} modalidade(s)" + (f", UF={uf}" if uf else "") + ")...")
     create_db_and_tables()
     total_novos = 0
 
@@ -102,6 +102,8 @@ def collect_pncp(limite_por_modalidade: int = LIMITE_POR_MODALIDADE,
                 "pagina": 1,
                 "tamanhoPagina": max(TAMANHO_PAGINA, limite_por_modalidade),
             }
+            if uf:
+                params["uf"] = uf
             payload = _get(params)
             if not payload or not payload.get("data"):
                 print(f"  [{rotulo}] sem registros.")
@@ -145,9 +147,12 @@ def collect_pncp(limite_por_modalidade: int = LIMITE_POR_MODALIDADE,
 if __name__ == "__main__":
     limite = LIMITE_POR_MODALIDADE
     dias = DIAS_JANELA
+    uf = None
     for arg in sys.argv[1:]:
         if arg.startswith("--limite="):
             limite = int(arg.split("=", 1)[1])
         elif arg.startswith("--dias="):
             dias = int(arg.split("=", 1)[1])
-    collect_pncp(limite_por_modalidade=limite, dias_janela=dias)
+        elif arg.startswith("--uf="):
+            uf = arg.split("=", 1)[1]
+    collect_pncp(limite_por_modalidade=limite, dias_janela=dias, uf=uf)

@@ -13,6 +13,7 @@ Obs.: o Portal da Transparência só coleta se PORTAL_TRANSPARENCIA_API_KEY esti
 ambiente (carregue com `set -a; source .env; set +a`); sem a chave, pula sem erro.
 """
 
+import os
 import sys
 
 from collectors.rss.rss_collector import collect_rss
@@ -33,6 +34,10 @@ def run(reset: bool = False):
 
     print("\n[2/6] Coleta PNCP (editais com propostas abertas)")
     collect_pncp()
+    foco_uf = os.getenv("FOCO_UF")
+    if foco_uf:
+        print(f"  + PNCP local (UF={foco_uf})")
+        collect_pncp(uf=foco_uf)
 
     print("\n[3/6] Coleta Portal da Transparência (emendas — requer chave no ambiente)")
     collect_transparencia()
