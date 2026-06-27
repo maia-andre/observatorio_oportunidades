@@ -1,7 +1,8 @@
 import math
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
 from sqlalchemy import func, or_
@@ -34,6 +35,8 @@ def read_root(
     category: str = "",
     order: str = "desc",
     relevancia: str = "relevantes",
+    prazo: str = "",
+    valor: str = "",
     page: int = 1,
 ):
     """Painel com busca full-text (FTS5/BM25), filtros, ordenação e paginação."""
@@ -60,6 +63,23 @@ def read_root(
                 stmt = stmt.where(Opportunity.category == category)
             if relevancia != "todas":
                 stmt = stmt.where(Opportunity.status != "irrelevante")
+            # Filtro por prazo (deadline)
+            if prazo == "com":
+                stmt = stmt.where(Opportunity.deadline.is_not(None))
+            elif prazo in ("30", "90"):
+                agora = datetime.now()
+                stmt = stmt.where(
+                    Opportunity.deadline.is_not(None),
+                    Opportunity.deadline >= agora,
+                    Opportunity.deadline <= agora + timedelta(days=int(prazo)),
+                )
+            # Filtro por valor
+            if valor == "com":
+                stmt = stmt.where(Opportunity.value.is_not(None))
+            elif valor == "100mil":
+                stmt = stmt.where(Opportunity.value >= 100_000)
+            elif valor == "1mi":
+                stmt = stmt.where(Opportunity.value >= 1_000_000)
             return stmt
 
         # Com texto de busca, tenta o FTS5 (ranking por relevância). search_ranked_ids
@@ -124,6 +144,20 @@ def read_root(
                 "category": category,
                 "order": order,
                 "relevancia": relevancia,
+                "prazo": prazo,
+                "valor": valor,
                 "usando_fts": usando_fts,
             },
+        )
+
+
+@app.get("/opportunity/{op_id}")
+def opportunity_detail(request: Request, op_id: int):
+    """Página de detalhe de uma oportunidade."""
+    with Session(engine) as session:
+        op = session.get(Opportunity, op_id)
+        if op is None:
+            raise HTTPException(status_code=404, detail="Oportunidade não encontrada")
+        return templates.TemplateResponse(
+            request=request, name="detail.html", context={"op": op}
         )
