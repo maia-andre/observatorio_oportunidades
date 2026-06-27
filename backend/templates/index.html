@@ -50,6 +50,12 @@
                     <option value="100mil" {% if valor == '100mil' %}selected{% endif %}>≥ R$ 100 mil</option>
                     <option value="1mi" {% if valor == '1mi' %}selected{% endif %}>≥ R$ 1 mi</option>
                 </select>
+                <select name="municipio" aria-label="Aderência ao município">
+                    <option value="0">Sem município</option>
+                    {% for p in profiles %}
+                    <option value="{{ p.id }}" {% if p.id == municipio %}selected{% endif %}>🎯 {{ p.name }}/{{ p.uf }}</option>
+                    {% endfor %}
+                </select>
                 <label style="display: flex; align-items: center; gap: .4rem;">
                     <input type="checkbox" name="relevancia" value="todas" {% if relevancia == 'todas' %}checked{% endif %}>
                     <small>Incluir irrelevantes</small>
@@ -60,7 +66,7 @@
 
         <article>
             <header>
-                <strong>{{ total }}</strong> oportunidade(s) encontrada(s){% if q or source or category or prazo or valor %} <small>(filtrado)</small>{% endif %}{% if usando_fts %} <small>· ordenado por relevância 🔎</small>{% endif %}
+                <strong>{{ total }}</strong> oportunidade(s) encontrada(s){% if q or source or category or prazo or valor or municipio %} <small>(filtrado)</small>{% endif %}{% if municipio %} <small>· ordenado por aderência 🎯</small>{% elif usando_fts %} <small>· ordenado por relevância 🔎</small>{% endif %}
             </header>
             <div class="overflow-auto">
                 <table class="striped">
@@ -82,6 +88,7 @@
                                 <small style="color: var(--pico-muted-color);">{{ op.description[:150] + '...' if op.description and op.description|length > 150 else op.description or '' }}</small>
                                 {% if op.deadline %}<br><small>⏰ Prazo: {{ op.deadline.strftime('%d/%m/%Y') }}</small>{% endif %}
                                 {% if op.value %}<br><small>💰 Valor: R$ {{ '%.2f'|format(op.value) }}</small>{% endif %}
+                                {% if matches.get(op.id) %}<br><small>🎯 <strong>Aderência: {{ matches[op.id][0] }}</strong> — {{ matches[op.id][1]|join(' · ') }}</small>{% endif %}
                             </td>
                             <td>
                                 {% if op.category %}<kbd>{{ op.category }}</kbd>{% else %}<small style="color: var(--pico-muted-color);">—</small>{% endif %}
@@ -113,7 +120,7 @@
             <ul>
                 <li>
                     {% if page > 1 %}
-                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&relevancia={{ relevancia|urlencode }}&prazo={{ prazo|urlencode }}&valor={{ valor|urlencode }}&page={{ page - 1 }}" role="button" class="secondary">← Anterior</a>
+                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&relevancia={{ relevancia|urlencode }}&prazo={{ prazo|urlencode }}&valor={{ valor|urlencode }}&municipio={{ municipio }}&page={{ page - 1 }}" role="button" class="secondary">← Anterior</a>
                     {% else %}
                     <a href="#" role="button" class="secondary" aria-disabled="true">← Anterior</a>
                     {% endif %}
@@ -125,7 +132,7 @@
             <ul>
                 <li>
                     {% if page < total_pages %}
-                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&relevancia={{ relevancia|urlencode }}&prazo={{ prazo|urlencode }}&valor={{ valor|urlencode }}&page={{ page + 1 }}" role="button" class="secondary">Próxima →</a>
+                    <a href="?q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category|urlencode }}&order={{ order|urlencode }}&relevancia={{ relevancia|urlencode }}&prazo={{ prazo|urlencode }}&valor={{ valor|urlencode }}&municipio={{ municipio }}&page={{ page + 1 }}" role="button" class="secondary">Próxima →</a>
                     {% else %}
                     <a href="#" role="button" class="secondary" aria-disabled="true">Próxima →</a>
                     {% endif %}
