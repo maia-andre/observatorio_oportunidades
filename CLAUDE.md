@@ -10,11 +10,12 @@ Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste r
 
 ## Estado atual
 
-- **Fase 0 (Descoberta)** e **Fase 1 (Radar Institucional — backend/painel)** concluídas: coleta autônoma → **normalização** → persistência → painel com busca/filtros/paginação.
-- **Fase 2 (Curadoria por regras)** com MVP entregue: classificador por palavras-chave (`processing/classifier.py`) preenche `category` e move `status` (`classificado`/`nao_classificado`). Sem IA (isso é Fase 3).
-- Backend FastAPI + SQLModel; painel server-side com Jinja2 + PicoCSS (via CDN).
-- **Banco padrão: SQLite** (`database/observatorio.db`, sem Docker); PostgreSQL via `DATABASE_URL` (alvo das fases futuras).
-- Em aberto: validação documentada das fontes RSS/API — issues **#3/#4** (Diego); ampliar regras/cobertura da classificação (issues **#6/#7/#8**).
+- **Fases 0–1** (Descoberta, Radar) ✅, **Fase 2** (Curadoria por regras) ✅ e **Fase 4** (Matching municipal, PoC) ✅.
+- **Pipeline atual (tudo determinístico, SEM LLM):** coleta (**RSS + PNCP + Portal da Transparência/emendas**) → **porta de relevância** (`processing/relevance.py`) → **classificação ponderada** com multi-rótulo (`processing/classifier.py`) → **enriquecimento** de prazo/valor por regex + **PDF** (`processing/enrich.py`, PyMuPDF) com **anti-contaminação** de boilerplate.
+- **Painel:** busca full-text **SQLite FTS5/BM25** (acento-insensível, `backend/search.py`), filtros (fonte/categoria/prazo/valor), página de detalhe `/opportunity/{id}`, e **matching municipal** (aderência 0–100, `processing/matching.py`).
+- **Restrição do projeto:** evolução **sem LLM / sem custo de API** (decisão deliberada — a Fase 3 "IA" do roadmap foi substituída pela "Fase 3-lite" determinística).
+- Backend FastAPI + SQLModel; painel Jinja2 + PicoCSS (CDN). **Banco padrão SQLite**; PostgreSQL via `DATABASE_URL`.
+- Issues **#3/#4** (validação de fontes, Diego) seguem abertas; **#6–#12** fechadas.
 
 ## Stack
 
@@ -22,28 +23,42 @@ Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste r
 - **Web/API:** FastAPI + Uvicorn
 - **ORM/validação:** SQLModel (envelopa SQLAlchemy + Pydantic)
 - **Banco:** SQLite (padrão Fase 0) · PostgreSQL (opcional/alvo futuro)
-- **Coleta:** requests, feedparser (RSS), BeautifulSoup + lxml (XML/sitemap)
+- **Coleta:** requests, feedparser (RSS), BeautifulSoup + lxml (XML); **PyMuPDF** (texto de PDF, no enrich)
+- **Busca:** SQLite **FTS5** (ranking BM25, acento-insensível) — `backend/search.py`
 - **Painel:** Jinja2 + PicoCSS
 - **Futuro:** frontend React/Next.js; infra Docker/Nginx
 
 ## Estrutura de diretórios
 
 - `backend/` — app FastAPI
-  - `main.py` — rotas e painel (rota `/` renderiza `index.html`)
-  - `database.py` — criação do engine e das tabelas
-  - `models.py` — modelo `Opportunity`
-  - `templates/index.html` — painel (Jinja2 + PicoCSS)
-- `collectors/` — scripts autônomos de coleta, um subdiretório por tipo: `rss/`, `api/`, `html/`, `sitemap/`
-- `processing/` — processamento pós-coleta: `normalizer.py` (Normalização, Fase 1), `rules.py` + `classifier.py` (Curadoria por regras, Fase 2), `extractor.py` + `enrich.py` (extração de prazo/valor por regex — Fase 3-lite, **sem LLM**)
-- `database/` — arquivo SQLite local (ignorado pelo git)
-- `docs/` — documentação por fase (`arquitetura/`, `fase 0/`, `fase 1/`)
-- `run_pipeline.py` — orquestrador: roda coleta (RSS + API/Sitemap) + classificação num único comando (aceita `--reset`)
-- `docker-compose.yml` — **opcional**, apenas para quem quiser rodar com PostgreSQL
-- `frontend/` — reservado para fases futuras
+  - `main.py` — painel (`/` lista/filtra/busca/ranqueia) e detalhe (`/opportunity/{id}`)
+  - `database.py` — engine + criação das tabelas
+  - `models.py` — modelos `Opportunity` e `MunicipalProfile`
+  - `search.py` — busca FTS5 (índice + triggers + ranking BM25)
+  - `templates/` — `index.html` (painel) e `detail.html` (detalhe)
+- `collectors/` — coleta autônoma (cron/CI):
+  - `sources.py` — **registro central** de todas as fontes (catálogo + `enabled`)
+  - `validate_sources.py` — **probe** de saúde das fontes (ao vivo)
+  - `rss/rss_collector.py` — RSS (lê do registro)
+  - `api/pncp_collector.py` — **PNCP** (editais c/ proposta aberta; suporta `--uf`)
+  - `api/transparencia_collector.py` — **Portal da Transparência** (emendas; chave via env)
+  - `api/api_collector.py` — coletor de sitemap **legado** (não usado na pipeline)
+- `processing/` — pós-coleta (tudo sem LLM):
+  - `normalizer.py` (normalização) · `relevance.py` (porta de relevância)
+  - `rules.py` + `classifier.py` (classificação ponderada, multi-rótulo)
+  - `extractor.py` + `enrich.py` (prazo/valor por regex + PDF + anti-contaminação)
+  - `matching.py` (aderência municipal) · `seed_profiles.py` (perfis de exemplo)
+- `run_pipeline.py` — orquestra coleta → relevância → classificação → enriquecimento (aceita `--reset`)
+- `.env.example` — modelo de variáveis (chaves/foco); o `.env` é **gitignored**
+- `database/` (SQLite, ignorado) · `docs/` · `docker-compose.yml` (opcional, PostgreSQL) · `frontend/` (futuro)
 
 ## Modelo de dados (`Opportunity`)
 
-`id` (PK) · `title` · `description?` · `url` (**único e indexado — chave de deduplicação**) · `published_date?` · `source` · `category?` · `deadline?` (prazo) · `value?` (valor em R$) · `status` (default `novo`) · `collected_at`. Definido em `backend/models.py`. Os campos `category`/`deadline`/`status` são da Fase 1 e permanecem vazios/`novo` até a curadoria/classificação (Fase 2). O helper `utcnow()` em `models.py` substitui o depreciado `datetime.utcnow()`.
+**`Opportunity`** (`backend/models.py`): `id` · `title` · `description?` · `url` (**único/indexado — chave de dedup**) · `published_date?` · `source` · `category?` · `categories?` (multi-rótulo, separado por vírgula) · `deadline?` · `value?` (R$) · `relevance_score?` (0–1) · `status` · `collected_at`. Ciclo do `status`: `novo` → (relevância) `irrelevante` ou segue → (classificação) `classificado`/`nao_classificado`.
+
+**`MunicipalProfile`**: `id` · `name` · `uf` · `interests` (categorias/keywords por vírgula) · `population?` — usado pelo matching (`processing/matching.py`).
+
+O helper `utcnow()` substitui o `datetime.utcnow()` depreciado. **Sem migrations**: `create_all` cria tabelas faltantes mas **não** altera colunas — mudança de modelo exige recriar o banco (apagar o `.db`).
 
 ## Como rodar (local, sem Docker)
 
@@ -53,26 +68,27 @@ Execute sempre **a partir da raiz do projeto** (os caminhos relativos dependem d
 # 1) criar/ativar venv e instalar dependências
 python3 -m venv venv        # só na primeira vez (o venv é ignorado pelo git)
 source venv/bin/activate     # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements.txt   # psycopg2-binary é OPCIONAL (só p/ PostgreSQL)
 
-# 2) subir o painel (cria o banco e as tabelas no 1º boot)
-uvicorn backend.main:app --reload
-# painel em http://localhost:8000
+# 2) (opcional) segredos e foco: copie .env.example -> .env (gitignored) e preencha
+#    PORTAL_TRANSPARENCIA_API_KEY (emendas) · FOCO_UF (ex.: SP) · FOCO_MUNICIPIO
+set -a; source .env; set +a   # carrega as variáveis no shell atual
 
-# 3) em outro terminal (venv ativo), rodar a pipeline (coleta RSS + API/Sitemap + classificação)
+# 3) subir o painel (cria banco/tabelas no 1º boot)
+uvicorn backend.main:app --reload   # http://localhost:8000
+
+# 4) pipeline completa: coleta (RSS+PNCP+emendas) -> relevância -> classificação -> enriquecimento
 python run_pipeline.py
-#    use --reset para reclassificar tudo do zero após alterar as regras:
-python run_pipeline.py --reset
+python run_pipeline.py --reset      # reprocessa tudo (após mudar regras)
 
-#    (ou as etapas individualmente:)
+# etapas/ferramentas individuais:
+python collectors/validate_sources.py            # probe de saúde de TODAS as fontes
 python collectors/rss/rss_collector.py
-python collectors/api/api_collector.py
-python processing/classifier.py          # aceita --reset
-
-# 4) enriquecimento Fase 3-lite (prazo/valor por regex, SEM LLM) — NÃO faz parte do run_pipeline.py.
-#    Baixa o conteúdo de cada link e só processa itens ainda sem deadline/value (re-executável).
-python processing/enrich.py                # até 20 itens
-python processing/enrich.py --limit=10 --source=Capta
+python collectors/api/pncp_collector.py --uf=SP  # PNCP, opcionalmente por estado
+python collectors/api/transparencia_collector.py --probe   # requer chave no ambiente
+python processing/classifier.py --reset
+python processing/enrich.py --limit=10           # prazo/valor (regex + PDF), também roda na pipeline
+python processing/seed_profiles.py               # perfis municipais de exemplo
 ```
 
 > **Opcional — PostgreSQL:** `docker-compose up -d` e, antes de iniciar o servidor/coletores, defina a variável de ambiente:
@@ -91,14 +107,15 @@ python processing/enrich.py --limit=10 --source=Capta
 - Importam engine/modelos do backend ajustando `sys.path` para a raiz do projeto.
 - **Constroem as oportunidades via `processing.normalizer.normalize_opportunity`** (não instanciam `Opportunity` direto): isso limpa HTML, apara texto e canonicaliza a URL antes de persistir.
 - **Deduplicam pela URL canônica** (`op.url`, consultando a existência antes de inserir) e dão `commit` ao final.
-- Para adicionar uma fonte: edite a lista `*_SOURCES` no coletor do tipo correspondente, ou crie um novo script no subdiretório adequado seguindo o mesmo padrão (Session do SQLModel → checagem por `url` → `commit`).
-- O coletor de API/sitemap limita a 5 itens por fonte (proposital, para o MVP).
+- Para adicionar/ajustar uma fonte: edite o **registro central** `collectors/sources.py` (o coletor RSS lê dele). Fontes com API própria têm coletor dedicado (`pncp_collector.py`, `transparencia_collector.py`). Rode `collectors/validate_sources.py` para checar a saúde de todas ao vivo.
+- **Segredos nunca no código/git:** chaves (ex.: Portal da Transparência) vêm só de variáveis de ambiente (`.env`, gitignored); coletores que precisam de chave **pulam sem erro** se ela faltar.
 
 ## Convenções gerais
 
 - Código e comentários em **português**.
-- **Sem migrations** na Fase 0: o schema vem de `SQLModel.metadata.create_all`. Mudanças no modelo exigem recriar o banco (ou migration manual).
-- Manter a Fase 0 enxuta — não antecipar funcionalidades de fases posteriores.
+- **Sem LLM / sem custo de API:** toda a curadoria/extração/matching é determinística (regras, regex, PyMuPDF, FTS5, overlap). Antes de adicionar dependência, confirmar.
+- **Sem migrations:** schema via `SQLModel.metadata.create_all` (cria tabelas faltantes, não altera colunas). Mudança de modelo → recriar o banco.
+- **Commit por tarefa; PR por etapa** para a `main`.
 
 ## Workflow Git
 
@@ -108,11 +125,11 @@ python processing/enrich.py --limit=10 --source=Capta
 
 ## Roadmap (resumo)
 
-0. **MVP de Descoberta** ✅ — coleta + persistência + painel
-1. **Radar Institucional** ✅ (backend/painel) — normalização, histórico, deduplicação, filtros, pesquisa
-2. **Curadoria Automatizada** 🚧 MVP — classificação por regras (`processing/classifier.py`)
-3. **Assistente de IA** — LLM/OCR (resumo, classificação semântica, extração de prazos)
-4. **Matching Institucional** — score de aderência oportunidade × município
-5. **Centro de Inteligência** — monitoramento legislativo/orçamentário e apoio à decisão
+0. **MVP de Descoberta** ✅
+1. **Radar Institucional** ✅ — normalização, histórico, dedup, filtros, busca
+2. **Curadoria Automatizada** ✅ — classificação ponderada por regras (multi-rótulo) + porta de relevância
+3. **Assistente de IA** → substituída pela **Fase 3-lite** (determinística, sem LLM): extração de prazo/valor por regex + PDF
+4. **Matching Institucional** ✅ (PoC) — `processing/matching.py` + perfis municipais
+5. **Centro de Inteligência** — monitoramento legislativo/orçamentário (futuro)
 
 Detalhamento de cada fase em `README.md` e `docs/`.

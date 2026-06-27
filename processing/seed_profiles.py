@@ -20,6 +20,12 @@ from backend.models import MunicipalProfile
 # Interesses usam os nomes das categorias da taxonomia (ver processing/rules.py),
 # o que faz a sobreposição de categorias do matching funcionar diretamente.
 PERFIS = [
+    # Município-foco real: São José dos Campos/SP (polo aeroespacial, tecnologia,
+    # educação — ITA/INPE/Embraer/Univap). Perfil de interesses amplo e realista.
+    {"name": "São José dos Campos", "uf": "SP",
+     "interests": ("Inovação, Educação, Saúde, Sustentabilidade, Mobilidade, "
+                   "Premiações, Convênios, Licitações, Tecnologia, Aeroespacial"),
+     "population": 730_000},
     {"name": "Atibaia", "uf": "SP",
      "interests": "Educação, Inovação, Sustentabilidade, Premiações, Cultura",
      "population": 150_000},

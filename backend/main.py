@@ -1,4 +1,5 @@
 import math
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
@@ -38,7 +39,7 @@ def read_root(
     relevancia: str = "relevantes",
     prazo: str = "",
     valor: str = "",
-    municipio: int = 0,
+    municipio: int = -1,
     page: int = 1,
 ):
     """Painel com busca full-text (FTS5/BM25), filtros, ordenação e paginação."""
@@ -59,6 +60,12 @@ def read_root(
         profiles = session.exec(
             select(MunicipalProfile).order_by(MunicipalProfile.name)
         ).all()
+        # Município-foco padrão (env FOCO_MUNICIPIO) quando nenhum é informado (-1).
+        # municipio == 0 = "Sem município" escolhido explicitamente (não re-aplica o foco).
+        if municipio < 0:
+            foco = os.getenv("FOCO_MUNICIPIO")
+            alvo = next((p for p in profiles if p.name == foco), None) if foco else None
+            municipio = alvo.id if alvo else 0
 
         # Filtros comuns (fonte/categoria/relevância), aplicáveis a qualquer query.
         def aplica_filtros(stmt):
