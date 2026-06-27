@@ -48,7 +48,7 @@
 
         <article>
             <header>
-                <strong>{{ total }}</strong> oportunidade(s) encontrada(s){% if q or source or category %} <small>(filtrado)</small>{% endif %}
+                <strong>{{ total }}</strong> oportunidade(s) encontrada(s){% if q or source or category %} <small>(filtrado)</small>{% endif %}{% if usando_fts %} <small>· ordenado por relevância 🔎</small>{% endif %}
             </header>
             <div class="overflow-auto">
                 <table class="striped">
