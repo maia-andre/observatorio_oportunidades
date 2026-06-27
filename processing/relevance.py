@@ -42,7 +42,7 @@ TERMOS_FRACOS = {  # sugerem, mas não bastam sozinhos
 
 # Fontes estruturadas/curadas que são quase 100% oportunidade: ganham base de confiança.
 FONTES_CONFIAVEIS = {
-    "PNCP-API", "Querido Diário", "Portal da Transparência", "Capta", "Prosas",
+    "PNCP", "PNCP-API", "Querido Diário", "Portal da Transparência", "Capta", "Prosas",
     "Prêmio Espírito Público", "Congresso Nacional",
 }
 

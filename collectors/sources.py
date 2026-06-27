@@ -65,8 +65,8 @@ SOURCES = [
     {"name": "Ciudades Educadoras",    "tier": "D", "type": "html",    "url": "http://www.ciudadeseducadorasla.org/", "enabled": False, "verify_ssl": False, "notes": "Erro de certificado SSL na Fase 0"},
 
     # ──────────── Candidatas estruturadas (recomendadas nesta etapa) ────────────
-    {"name": "PNCP-API",               "tier": "B", "type": "json", "url": "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao", "enabled": True, "verify_ssl": True, "notes": "API REST pública do PNCP (editais/contratações) — endpoint/params a confirmar no probe"},
-    {"name": "Querido Diário",         "tier": "B", "type": "json", "url": "https://queridodiario.ok.org.br/api/gazettes", "enabled": True, "verify_ssl": True, "notes": "API pública de diários oficiais municipais (Open Knowledge Brasil)"},
+    {"name": "PNCP-API",               "tier": "B", "type": "json", "url": "https://pncp.gov.br/api/consulta/v1/contratacoes/proposta", "enabled": False, "verify_ssl": True, "notes": "Coletor dedicado: collectors/api/pncp_collector.py (exige dataFinal + modalidade; tamanhoPagina>=10)"},
+    {"name": "Querido Diário",         "tier": "B", "type": "json", "url": "https://queridodiario.ok.org.br/api/gazettes", "enabled": False, "verify_ssl": True, "notes": "API retorna 403 (bloqueio tipo Cloudflare) deste ambiente — reavaliar acesso/headers"},
 ]
 
 

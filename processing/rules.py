@@ -28,6 +28,10 @@ RULES = OrderedDict([
     ("Mobilidade",       ["mobilidade", "transporte", "transito", "ciclovia", "pedestre", "aviacao", "aeroporto", "portos"]),
     ("Inovação",         ["inovacao", "cidades inteligentes", "smart cit", "tecnologia", "startup",
                           "transformacao digital", "innovation"]),
+    # Licitações/compras públicas (fontes estruturadas, ex.: PNCP). Vem antes do
+    # guarda-chuva "Convênios" para capturar o vocabulário de contratação pública.
+    ("Licitações",       ["licitacao", "pregao", "registro de precos", "srp", "concorrencia",
+                          "tomada de precos", "dispensa de licitacao", "aquisicao", "contratacao de"]),
     # Convênios fica por último: atua como guarda-chuva para "editais/chamadas"
     # genéricos que não casaram com uma categoria mais específica acima.
     ("Convênios",        ["convenio", "chamamento", "chamada publica", "chamada aberta", "termo de fomento", "edital", "chamada"]),

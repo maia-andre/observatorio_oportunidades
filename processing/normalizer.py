@@ -7,6 +7,7 @@ Os coletores (RSS, API, Sitemap, HTML) constroem suas oportunidades através de
 """
 
 import re
+import warnings
 from datetime import datetime
 from typing import Optional
 from urllib.parse import urlsplit, urlunsplit
@@ -14,6 +15,15 @@ from urllib.parse import urlsplit, urlunsplit
 from bs4 import BeautifulSoup
 
 from backend.models import Opportunity
+
+# Campos curtos que parecem URL/arquivo (ex.: alguns títulos do PNCP) fazem o
+# BeautifulSoup emitir MarkupResemblesLocatorWarning. É inofensivo aqui (queremos
+# só extrair texto), então silenciamos para não poluir a saída dos coletores.
+try:
+    from bs4 import MarkupResemblesLocatorWarning
+    warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
+except ImportError:  # versões antigas do bs4
+    warnings.filterwarnings("ignore", message=".*looks like a (URL|filename).*")
 
 # Limites para evitar campos absurdamente longos vindos das fontes.
 MAX_TITLE = 300
@@ -68,6 +78,7 @@ def normalize_opportunity(
     published_date=None,
     category=None,
     deadline=None,
+    value=None,
 ) -> Optional[Opportunity]:
     """Aplica a normalização e devolve um `Opportunity` pronto para persistir.
 
@@ -86,4 +97,5 @@ def normalize_opportunity(
         published_date=normalize_date(published_date),
         category=category,
         deadline=normalize_date(deadline),
+        value=value,
     )
