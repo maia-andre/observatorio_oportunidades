@@ -20,6 +20,14 @@
         <div><div class="rotulo">Status</div><div class="valor">{{ op.status }}</div></div>
     </div>
 
+    {% if op.summary or op.department %}
+    <div class="curadoria">
+        <div class="selo">Curadoria (IA)</div>
+        {% if op.summary %}<p class="resumo">{{ op.summary }}</p>{% endif %}
+        {% if op.department %}<p class="secretaria">Secretaria sugerida: <strong>{{ op.department }}</strong></p>{% endif %}
+    </div>
+    {% endif %}
+
     {% if op.description %}<p class="descricao">{{ op.description }}</p>{% endif %}
 
     <div class="detalhe-footer">
