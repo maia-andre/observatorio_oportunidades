@@ -19,6 +19,7 @@ PESO_MUNICIPIO = 25   # oportunidade cita o nome do município
 PESO_UF = 10          # mesma UF (quando não cita o município)
 PESO_KEYWORD = 8      # por termo de interesse presente no texto (até 2 contam)
 PESO_ABERTURA = 10    # prazo em aberto (futuro)
+PESO_VENCIDA = 25     # penalidade: prazo já vencido (não acionável)
 
 
 def _norm(texto: str) -> str:
@@ -69,12 +70,15 @@ def score_match(op: Opportunity, profile: MunicipalProfile) -> Tuple[int, List[s
         score += min(2, len(kw_match)) * PESO_KEYWORD
         justificativa.append("termos de interesse: " + ", ".join(sorted(kw_match)))
 
-    # 4) Prazo em aberto (oportunidade acionável agora).
+    # 4) Prazo: em aberto soma (acionável agora); vencido penaliza (não acionável).
     if op.deadline and op.deadline >= datetime.now():
         score += PESO_ABERTURA
         justificativa.append("prazo em aberto")
+    elif op.deadline:
+        score -= PESO_VENCIDA
+        justificativa.append("prazo vencido")
 
-    return min(100, score), justificativa
+    return max(0, min(100, score)), justificativa
 
 
 def rank_opportunities(profile: MunicipalProfile, ops: List[Opportunity]):
