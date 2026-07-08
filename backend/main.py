@@ -35,6 +35,7 @@ def read_root(
     q: str = "",
     source: str = "",
     category: str = "",
+    secretaria: str = "",
     order: str = "desc",
     relevancia: str = "relevantes",
     vencidas: str = "",
@@ -60,6 +61,14 @@ def read_root(
             .distinct()
             .order_by(Opportunity.category)
         ).all()
+        # Secretarias sugeridas pela curadoria LLM — o filtro só aparece no
+        # painel quando existir ao menos uma oportunidade curada.
+        departments = session.exec(
+            select(Opportunity.department)
+            .where(Opportunity.department.is_not(None))
+            .distinct()
+            .order_by(Opportunity.department)
+        ).all()
         profiles = session.exec(
             select(MunicipalProfile).order_by(MunicipalProfile.name)
         ).all()
@@ -78,6 +87,8 @@ def read_root(
                 stmt = stmt.where(Opportunity.source == source)
             if category:
                 stmt = stmt.where(Opportunity.category == category)
+            if secretaria:
+                stmt = stmt.where(Opportunity.department == secretaria)
             if relevancia != "todas":
                 stmt = stmt.where(Opportunity.status != "irrelevante")
             # Ciclo de vida: por padrão oculta oportunidades com prazo já vencido
@@ -191,6 +202,7 @@ def read_root(
                 "q": q,
                 "source": source,
                 "category": category,
+                "secretaria": secretaria,
                 "order": order,
                 "relevancia": relevancia,
                 "vencidas": vencidas,
@@ -198,6 +210,7 @@ def read_root(
                 "valor": valor,
                 "municipio": municipio,
                 "profiles": profiles,
+                "departments": departments,
                 "matches": matches,
                 "usando_fts": usando_fts,
                 "agora": agora,
