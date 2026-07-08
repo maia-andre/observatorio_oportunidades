@@ -3,7 +3,9 @@
 **Sem LLM** (custo zero). Extrai, de texto livre de editais:
   - datas (`dd/mm/aaaa` e "DD de mês de AAAA");
   - **prazo** (data associada a termos como "inscrições até", "prazo", "encerramento");
-  - **valores monetários** (`R$ ...`, com suporte a "mil"/"milhões"/"bilhões").
+  - **valores monetários** (`R$ ...`, com "mil"/"milhões"/"bilhões" e as abreviações
+    "Mi"/"MM"/"Bi"; ignora faixas de receita/faturamento do público-alvo, que são
+    critério de elegibilidade e não valor da oportunidade).
 
 A heurística não é perfeita (formatos variam, PDFs ficam de fora), mas cobre uma
 fatia relevante dos editais textuais a custo zero — ver `processing/enrich.py`.
@@ -28,7 +30,15 @@ MESES = {
 MULTIPLICADORES = {
     "mil": 1_000, "milhao": 1_000_000, "milhoes": 1_000_000,
     "bilhao": 1_000_000_000, "bilhoes": 1_000_000_000,
+    # Abreviações usuais em editais e listagens ("R$ 4,8 Mi", "R$ 2 MM", "R$ 1 Bi").
+    "mi": 1_000_000, "mm": 1_000_000, "bi": 1_000_000_000,
 }
+
+# Um R$ precedido destes termos (janela curta) é faixa de receita/faturamento do
+# público-alvo — elegibilidade, não o valor da oportunidade (ex.: chamadas FINEP:
+# "Receita: até R$ 4,8 Mi, ... maior que R$ 300,0 Mi").
+CONTEXTOS_NAO_VALOR = ("receita", "faturamento")
+_JANELA_CONTEXTO = 40
 
 # Termos que sinalizam que a data próxima é um prazo (texto já sem acento).
 PRAZO_KEYS = [
@@ -38,8 +48,11 @@ PRAZO_KEYS = [
 
 _RE_DATA_NUM = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{2,4})\b")
 _RE_DATA_EXT = re.compile(r"\b(\d{1,2})\s+de\s+([a-z]+)\s+de\s+(\d{4})\b")
-# R$ seguido de número pt-BR (1.234.567,89 / 50.000 / 500), com multiplicador opcional.
-_RE_VALOR = re.compile(r"r\$\s*(\d[\d.]*(?:,\d+)?)\s*(milhoes|milhao|bilhoes|bilhao|mil)?")
+# R$ seguido de número pt-BR (1.234.567,89 / 50.000 / 500), com multiplicador
+# opcional — por extenso ou abreviado. "mil" antes de "mi" na alternância (senão
+# "300 mil" casaria "mi"); o \b final impede falso multiplicador em palavra maior
+# (ex.: "R$ 300 milhas" não vira 300 milhões... e "minutos" não vira "mi").
+_RE_VALOR = re.compile(r"r\$\s*(\d[\d.]*(?:,\d+)?)\s*(milhoes|milhao|bilhoes|bilhao|mil|mi|mm|bi)?\b")
 
 
 def _to_date(d, m, y) -> Optional[datetime]:
@@ -85,15 +98,22 @@ def extract_dates(text: str) -> List[datetime]:
 
 
 def extract_values(text: str) -> List[float]:
-    """Todos os valores monetários (R$) reconhecidos, já com multiplicadores aplicados."""
+    """Todos os valores monetários (R$) reconhecidos, já com multiplicadores aplicados.
+
+    Valores em contexto de receita/faturamento (janela curta antes do match) são
+    descartados: são o porte das empresas elegíveis, não o valor da oportunidade.
+    """
     t = _strip_accents((text or "").lower())
     valores = []
-    for num, mult in _RE_VALOR.findall(t):
-        v = _parse_money_ptbr(num)
+    for m in _RE_VALOR.finditer(t):
+        contexto = t[max(0, m.start() - _JANELA_CONTEXTO):m.start()]
+        if any(k in contexto for k in CONTEXTOS_NAO_VALOR):
+            continue
+        v = _parse_money_ptbr(m.group(1))
         if v is None:
             continue
-        if mult:
-            v *= MULTIPLICADORES.get(mult, 1)
+        if m.group(2):
+            v *= MULTIPLICADORES.get(m.group(2), 1)
         valores.append(v)
     return valores
 

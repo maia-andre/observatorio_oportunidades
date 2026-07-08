@@ -1,7 +1,10 @@
 """Busca full-text com SQLite FTS5 (ranking BM25) — Etapa B (B2).
 
-Cria uma tabela virtual FTS5 de **conteúdo externo**, espelhando `opportunity` e
-mantida em sincronia por triggers, e oferece busca ranqueada por relevância.
+Cria uma tabela virtual FTS5 de **conteúdo externo**, espelhando `opportunity`
+(título, descrição e **resumo da curadoria LLM**) e mantida em sincronia por
+triggers, e oferece busca ranqueada por relevância (BM25 com pesos por coluna:
+título > resumo > descrição). O resumo entra no índice pelo trigger de UPDATE,
+já que a curadoria roda depois da inserção.
 
 É específico do SQLite; com PostgreSQL (alvo futuro) tudo aqui vira no-op e o
 `main.py` cai para a busca por LIKE. O tokenizer usa `remove_diacritics 2`, então
@@ -29,27 +32,41 @@ def setup_fts(engine) -> bool:
         return False
     try:
         with engine.begin() as conn:
+            # Migração de schema do índice: CREATE ... IF NOT EXISTS não atualiza
+            # definições antigas, então se o índice existe sem a coluna `summary`
+            # (versão anterior), derruba tabela + triggers e recria — o rebuild
+            # abaixo repopula tudo a partir de `opportunity`.
+            existe = conn.execute(text(
+                "SELECT count(*) FROM sqlite_master WHERE name='opportunity_fts'"
+            )).scalar()
+            tem_summary = conn.execute(text(
+                "SELECT count(*) FROM pragma_table_info('opportunity_fts') WHERE name='summary'"
+            )).scalar()
+            if existe and not tem_summary:
+                for trigger in ("opportunity_ai", "opportunity_ad", "opportunity_au"):
+                    conn.execute(text(f"DROP TRIGGER IF EXISTS {trigger}"))
+                conn.execute(text("DROP TABLE opportunity_fts"))
             conn.execute(text(
                 "CREATE VIRTUAL TABLE IF NOT EXISTS opportunity_fts USING fts5("
-                "title, description, content='opportunity', content_rowid='id', "
+                "title, description, summary, content='opportunity', content_rowid='id', "
                 "tokenize=\"unicode61 remove_diacritics 2\")"
             ))
             conn.execute(text(
                 "CREATE TRIGGER IF NOT EXISTS opportunity_ai AFTER INSERT ON opportunity BEGIN "
-                "INSERT INTO opportunity_fts(rowid, title, description) "
-                "VALUES (new.id, new.title, new.description); END"
+                "INSERT INTO opportunity_fts(rowid, title, description, summary) "
+                "VALUES (new.id, new.title, new.description, new.summary); END"
             ))
             conn.execute(text(
                 "CREATE TRIGGER IF NOT EXISTS opportunity_ad AFTER DELETE ON opportunity BEGIN "
-                "INSERT INTO opportunity_fts(opportunity_fts, rowid, title, description) "
-                "VALUES('delete', old.id, old.title, old.description); END"
+                "INSERT INTO opportunity_fts(opportunity_fts, rowid, title, description, summary) "
+                "VALUES('delete', old.id, old.title, old.description, old.summary); END"
             ))
             conn.execute(text(
                 "CREATE TRIGGER IF NOT EXISTS opportunity_au AFTER UPDATE ON opportunity BEGIN "
-                "INSERT INTO opportunity_fts(opportunity_fts, rowid, title, description) "
-                "VALUES('delete', old.id, old.title, old.description); "
-                "INSERT INTO opportunity_fts(rowid, title, description) "
-                "VALUES (new.id, new.title, new.description); END"
+                "INSERT INTO opportunity_fts(opportunity_fts, rowid, title, description, summary) "
+                "VALUES('delete', old.id, old.title, old.description, old.summary); "
+                "INSERT INTO opportunity_fts(rowid, title, description, summary) "
+                "VALUES (new.id, new.title, new.description, new.summary); END"
             ))
             conn.execute(text("INSERT INTO opportunity_fts(opportunity_fts) VALUES('rebuild')"))
         return True
@@ -85,9 +102,11 @@ def search_ranked_ids(engine, q: str, limit: int = 1000):
         return None
     try:
         with engine.connect() as conn:
+            # Pesos por coluna (ordem do CREATE): título 3×, descrição 1×, resumo 2× —
+            # bater no título vale mais; o resumo curado é limpo e fica entre os dois.
             rows = conn.execute(
                 text("SELECT rowid FROM opportunity_fts WHERE opportunity_fts MATCH :m "
-                     "ORDER BY bm25(opportunity_fts) LIMIT :lim"),
+                     "ORDER BY bm25(opportunity_fts, 3.0, 1.0, 2.0) LIMIT :lim"),
                 {"m": match, "lim": limit},
             ).all()
         return [r[0] for r in rows]

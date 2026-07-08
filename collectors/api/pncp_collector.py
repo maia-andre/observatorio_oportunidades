@@ -126,7 +126,9 @@ def collect_pncp(limite_por_modalidade: int = LIMITE_POR_MODALIDADE,
                     source="PNCP",
                     published_date=_parse_dt(item.get("dataPublicacaoPncp")),
                     deadline=_parse_dt(item.get("dataEncerramentoProposta")),
-                    value=item.get("valorTotalEstimado"),
+                    # valorTotalEstimado 0 = sigiloso/não informado no PNCP — nulo,
+                    # senão o filtro "com valor" do painel enche de zeros.
+                    value=item.get("valorTotalEstimado") or None,
                 )
                 if op is None:
                     continue

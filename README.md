@@ -1,5 +1,3 @@
-![Banner](banner.png)
-
 # <img src="logo.jpg" alt="Logo" width="45" align="left"> PoC - Observatório de Oportunidades Institucionais
 <br>
 
@@ -24,7 +22,7 @@ A arquitetura foi inspirada em sistemas modernos de curadoria de informação, e
 
 O objetivo não é apenas realizar scraping de páginas, mas criar uma plataforma evolutiva de inteligência institucional.
 
-> **Estado de implementação (Jul/2026):** o backend entrega um pipeline ponta a ponta de núcleo **100% determinístico** — coleta (RSS + PNCP + **FINEP** + Portal da Transparência) → relevância → classificação ponderada (multi-rótulo) → enriquecimento (regex + PDF) → busca **FTS5** → **matching municipal** (aderência oportunidade × município, com ciclo de vida de prazos no painel). Fases 1, 2 e 4 (PoC) concluídas; a Fase 3 foi entregue na variante "lite" (determinística) **mais uma camada opcional de curadoria com IA** (resumo + secretaria sugerida via Gemini free tier, custo zero, ativada por `GEMINI_API_KEY`). Detalhes operacionais em `CLAUDE.md`.
+> **Estado de implementação (Jul/2026):** pipeline ponta a ponta rodando — coleta (**15 feeds RSS + 3 APIs**: PNCP, FINEP e Portal da Transparência/emendas) → porta de relevância → classificação ponderada (multi-rótulo) → enriquecimento de prazo/valor (regex + PDF, com anti-contaminação) → **curadoria LLM opcional** (resumo executivo + secretaria sugerida via Gemini free tier, custo zero, ativada por `GEMINI_API_KEY`) → busca **FTS5** → **matching municipal** com ciclo de vida de prazos. O painel exibe o resumo curado na lista e filtra por secretaria sugerida. O ecossistema de prêmios/selos foi mapeado e as fontes com feed entraram no monitoramento (`docs/pesquisa_emendas_premios_selos.md`). Status fase a fase na tabela abaixo; detalhes operacionais em `CLAUDE.md`.
 
 ---
 
@@ -75,9 +73,22 @@ A construção do projeto está dividida em fases evolutivas.
 
 Cada fase entrega valor real e prepara a base para a próxima.
 
+## Status das Fases (Jul/2026)
+
+| Fase | Nome | Status |
+|---|---|---|
+| 0 | MVP de Descoberta | ✅ Concluída |
+| 1 | Radar Institucional | ✅ Concluída |
+| 2 | Curadoria Automatizada | ✅ Concluída |
+| 3 | Assistente de IA | ✅ Entregue — variante "3-lite" determinística + curadoria LLM opcional |
+| 4 | Matching Institucional | ✅ Concluída (PoC) |
+| 5 | Centro de Inteligência | 🔄 Em aberto — primeiros passos dados (emendas + prêmios/selos) |
+
 ---
 
 # Fase 0 - MVP de Descoberta
+
+> **Status: ✅ concluída** — validação documentada abaixo; pivô PostgreSQL → SQLite em Jun/2026.
 
 ## Objetivo
 
@@ -128,6 +139,8 @@ Descobrir oportunidades sem intervenção humana.
 ---
 
 # Fase 1 - Radar Institucional
+
+> **Status: ✅ concluída.** Normalização central com deduplicação por URL canônica (`processing/normalizer.py`), histórico em SQLite, filtros (fonte/categoria/secretaria/prazo/valor), busca full-text FTS5/BM25 acento-insensível, paginação e página de detalhe. Registro central de fontes (`collectors/sources.py`) com 15 feeds RSS ativos + 3 APIs dedicadas (PNCP, FINEP, Portal da Transparência) e probe de saúde (`collectors/validate_sources.py`).
 
 ## Objetivo
 
@@ -181,6 +194,8 @@ Não perder nenhuma oportunidade relevante.
 ---
 
 # Fase 2 - Curadoria Automatizada
+
+> **Status: ✅ concluída.** Porta de relevância (`processing/relevance.py`) filtra ruído de notícia antes da classificação; classificação ponderada por regras com multi-rótulo (`processing/rules.py` + `processing/classifier.py`). As categorias iniciais estão ativas — e ampliadas (ex.: Licitações, via PNCP).
 
 ## Objetivo
 
@@ -236,6 +251,8 @@ Reduzir o volume de triagem manual.
 ---
 
 # Fase 3 - Assistente de IA
+
+> **Status: ✅ entregue em duas camadas.** (1) Variante **"3-lite" determinística** (custo zero, sem LLM): extração de datas/prazo e valores por regex + leitura de PDF (PyMuPDF), com anti-contaminação de boilerplate (`processing/extractor.py` + `processing/enrich.py`). (2) **Curadoria com IA, opcional**: resumo executivo + secretaria responsável sugerida via Gemini free tier (`processing/curate_llm.py`), ativada por `GEMINI_API_KEY` — sem a chave, a pipeline segue 100% determinística. O exemplo de saída abaixo (categoria + prazo + responsável sugerido + resumo) é hoje o comportamento real do sistema; OCR segue fora do escopo.
 
 ## Objetivo
 
@@ -299,6 +316,8 @@ Entender o conteúdo das oportunidades.
 
 # Fase 4 - Matching Institucional
 
+> **Status: ✅ concluída (PoC).** Score de aderência 0–100 determinístico e interpretável (`processing/matching.py`): categorias × interesses do perfil, localidade (município/UF), termos de interesse e prazo (em aberto soma, vencido penaliza) — com justificativa exibida no painel. Perfis municipais de exemplo (`processing/seed_profiles.py`) e modo aderência automático via `FOCO_MUNICIPIO`.
+
 ## Objetivo
 
 Avaliar aderência entre oportunidades e a realidade municipal.
@@ -340,6 +359,8 @@ Priorizar oportunidades com maior potencial de sucesso.
 ---
 
 # Fase 5 - Centro de Inteligência Institucional
+
+> **Status: 🔄 em aberto — primeiros passos dados.** Emendas parlamentares já são coletadas (Portal da Transparência, com chave) e o ecossistema de prêmios/selos foi mapeado, com as fontes monitoráveis integradas ao radar (`docs/pesquisa_emendas_premios_selos.md`). Monitoramento legislativo, de indicadores e o painel estratégico seguem futuros.
 
 ## Objetivo
 
