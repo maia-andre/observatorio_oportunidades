@@ -74,6 +74,18 @@ SOURCES = [
     {"name": "Desenvolve SP",          "tier": "D", "type": "html", "url": "https://www.desenvolvesp.com.br/", "enabled": False, "verify_ssl": True, "notes": "Sem RSS; sitemap.xml retorna 403 (anti-bot) — linhas de crédito municipais exigiriam scraping dedicado"},
     {"name": "Prefeitura SJC",         "tier": "D", "type": "html", "url": "https://www.sjc.sp.gov.br/", "enabled": False, "verify_ssl": True, "notes": "Sem /feed nem sitemap.xml (404) — portal próprio; reavaliar página de editais/licitações"},
     {"name": "FAPESP (chamadas)",      "tier": "D", "type": "html", "url": "https://fapesp.br/chamadas", "enabled": False, "verify_ssl": True, "notes": "Sem RSS de chamadas (Agência FAPESP cobre por notícia) — página de chamadas vigentes exigiria scraping dedicado"},
+
+    # ──────── Prêmios/selos — investigação 07/2026 (docs/pesquisa_emendas_premios_selos.md) ────────
+    {"name": "Atricon",                "tier": "A", "type": "rss", "url": "https://atricon.org.br/feed", "enabled": True, "verify_ssl": True, "notes": "WordPress — promotora do Selo PNTP (transparência); notícias gerais dos TCEs passam pela porta de relevância"},
+    {"name": "APM",                    "tier": "A", "type": "rss", "url": "https://www.apaulista.org.br/feed", "enabled": True, "verify_ssl": True, "notes": "WordPress — Associação Paulista de Municípios (eventos/editais/prêmios p/ municípios SP; exige www)"},
+    {"name": "Sindinfor",              "tier": "A", "type": "rss", "url": "https://sindinfor.org.br/feed", "enabled": True, "verify_ssl": True, "notes": "WordPress — promove o Prêmio Nacional Cidades Tecnológicas"},
+    {"name": "Smart City Business",    "tier": "A", "type": "rss", "url": "https://www.smartcitybusiness.com.br/feed", "enabled": True, "verify_ssl": True, "notes": "WordPress — congresso/premiação InovaCidade"},
+    {"name": "República.org",          "tier": "A", "type": "rss", "url": "https://republica.org/feed", "enabled": True, "verify_ssl": True, "notes": "WordPress — mantenedora do Prêmio Espírito Público (gestão de pessoas no setor público)"},
+    {"name": "CNM",                    "tier": "D", "type": "html", "url": "https://www.cnm.org.br/", "enabled": False, "verify_ssl": True, "notes": "Sem RSS (/feed 404 com e sem www) — divulga prêmios p/ municípios; monitorar exigiria scraping dedicado"},
+    {"name": "Band Cidades Excelentes","tier": "D", "type": "html", "url": "https://www.bandcidadesexcelentes.com.br/", "enabled": False, "verify_ssl": True, "notes": "Conexão falha deste ambiente e sem feed conhecido — ranking IGMA avalia todos os municípios automaticamente (inscrição não é gargalo)"},
+    {"name": "Selo UNICEF",            "tier": "D", "type": "html", "url": "https://selounicef.org.br/", "enabled": False, "verify_ssl": True, "notes": "Sem RSS (/feed 404) — ciclo bianual com edital próprio; acompanhar manualmente na janela de adesão"},
+    {"name": "Prêmio Innovare",        "tier": "D", "type": "html", "url": "https://www.premioinnovare.com.br/", "enabled": False, "verify_ssl": True, "notes": "Sem RSS (/feed devolve HTML) — foco em sistema de Justiça, relevância municipal baixa"},
+    {"name": "TCU (PNPC)",             "tier": "D", "type": "html", "url": "https://portal.tcu.gov.br/", "enabled": False, "verify_ssl": True, "notes": "Sem RSS utilizável encontrado (/rss falha) — PNPC tem adesão contínua, sem edital periódico"},
 ]
 
 

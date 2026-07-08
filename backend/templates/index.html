@@ -27,6 +27,17 @@
                 {% endfor %}
             </select>
         </div>
+        {% if departments %}
+        <div class="field">
+            <label for="f-sec">Secretaria</label>
+            <select id="f-sec" name="secretaria" onchange="this.form.submit()">
+                <option value="">Todas as secretarias</option>
+                {% for d in departments %}
+                <option value="{{ d }}" {% if d == secretaria %}selected{% endif %}>{{ d }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
         <div class="field">
             <label for="f-mun">Município (aderência)</label>
             <select id="f-mun" name="municipio" onchange="this.form.submit()">
@@ -76,7 +87,7 @@
 <div class="resultados-bar">
     <span class="total">{{ total }} oportunidade(s)</span>
     <span>
-        {% if q or source or category or prazo or valor or municipio %}<span class="tag">filtrado</span>{% endif %}
+        {% if q or source or category or secretaria or prazo or valor or municipio %}<span class="tag">filtrado</span>{% endif %}
         {% if municipio %}<span class="tag">ordenado por aderência</span>{% elif usando_fts %}<span class="tag">ordenado por relevância</span>{% endif %}
     </span>
 </div>
@@ -99,8 +110,12 @@
                 <td>
                     <a href="/opportunity/{{ op.id }}" class="titulo-op">{{ op.title }}</a>
                     {% if ultima_coleta and op.collected_at and op.collected_at.date() == ultima_coleta.date() %}<span class="chip-nova">nova</span>{% endif %}
+                    {% if op.summary %}
+                    <div class="meta-linha resumo-curado"><span class="marca-curada" title="Resumo da curadoria (IA)">✦</span> {{ op.summary }}</div>
+                    {% else %}
                     <div class="meta-linha">{{ op.description[:140] + '…' if op.description and op.description|length > 140 else op.description or '' }}</div>
-                    {% if op.deadline or op.value %}
+                    {% endif %}
+                    {% if op.deadline or op.value or op.department %}
                     <div class="meta-linha">
                         {% if op.deadline %}
                             {% set dias = (op.deadline - agora).days %}
@@ -112,8 +127,10 @@
                             ⏰ Prazo: <strong>{{ op.deadline.strftime('%d/%m/%Y') }}</strong>
                             {% endif %}
                         {% endif %}
-                        {% if op.deadline and op.value %} &nbsp;·&nbsp; {% endif %}
+                        {% if op.deadline and (op.value or op.department) %} &nbsp;·&nbsp; {% endif %}
                         {% if op.value %}💰 R$ {{ '%.2f'|format(op.value) }}{% endif %}
+                        {% if op.value and op.department %} &nbsp;·&nbsp; {% endif %}
+                        {% if op.department %}🏛️ <a href="?secretaria={{ op.department|urlencode }}" title="Filtrar por esta secretaria">{{ op.department }}</a>{% endif %}
                     </div>
                     {% endif %}
                     {% if matches.get(op.id) %}
@@ -134,7 +151,7 @@
             {% else %}
             <tr>
                 <td colspan="5" style="text-align: center; padding: 40px; color: #5b6b7b;">
-                    {% if q or source or category or prazo or valor or municipio %}
+                    {% if q or source or category or secretaria or prazo or valor or municipio %}
                     Nenhuma oportunidade corresponde aos filtros aplicados.
                     {% else %}
                     Nenhuma oportunidade no banco ainda. Rode <code>python run_pipeline.py</code> para povoar.
@@ -147,7 +164,7 @@
 </div>
 
 {% if total_pages > 1 %}
-{% set qs = "q=" ~ q|urlencode ~ "&source=" ~ source|urlencode ~ "&category=" ~ category|urlencode ~ "&order=" ~ order|urlencode ~ "&relevancia=" ~ relevancia|urlencode ~ "&vencidas=" ~ vencidas|urlencode ~ "&prazo=" ~ prazo|urlencode ~ "&valor=" ~ valor|urlencode ~ "&municipio=" ~ municipio %}
+{% set qs = "q=" ~ q|urlencode ~ "&source=" ~ source|urlencode ~ "&category=" ~ category|urlencode ~ "&secretaria=" ~ secretaria|urlencode ~ "&order=" ~ order|urlencode ~ "&relevancia=" ~ relevancia|urlencode ~ "&vencidas=" ~ vencidas|urlencode ~ "&prazo=" ~ prazo|urlencode ~ "&valor=" ~ valor|urlencode ~ "&municipio=" ~ municipio %}
 <nav class="paginacao">
     {% if page > 1 %}
     <a href="?{{ qs }}&page={{ page - 1 }}" class="btn btn-outline btn-sm">← Anterior</a>

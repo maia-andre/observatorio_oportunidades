@@ -158,6 +158,14 @@ def curate_llm(limit: int = LIMITE, model: str = None) -> int:
                 print("  ! lote sem resposta — interrompendo (tente novamente depois).")
                 break
             itens = _extrair_itens(resposta)
+            if not itens:
+                # HTTP 200 mas JSON inválido/vazio: flutuação do modelo (na
+                # prática ~1 lote em 4). Uma única repetição costuma resolver;
+                # o que ainda falhar fica pendente para a próxima execução.
+                print("  ! lote com resposta inválida — repetindo uma vez...")
+                time.sleep(PAUSA_S)
+                resposta = _chamar_gemini(api_key, model, _payload_lote(lote))
+                itens = _extrair_itens(resposta) if resposta else {}
             for op in lote:
                 dados = itens.get(op.id)
                 if not dados:
