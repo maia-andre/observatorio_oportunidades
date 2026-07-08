@@ -14,7 +14,15 @@
     </p>
 
     <div class="meta">
-        <div><div class="rotulo">⏰ Prazo</div><div class="valor">{{ op.deadline.strftime('%d/%m/%Y') if op.deadline else '—' }}</div></div>
+        <div><div class="rotulo">⏰ Prazo</div><div class="valor">
+            {% if op.deadline and op.deadline < agora %}
+            <span class="prazo-vencido">{{ op.deadline.strftime('%d/%m/%Y') }} · vencida</span>
+            {% elif op.deadline and (op.deadline - agora).days <= 7 %}
+            <span class="prazo-urgente">{{ op.deadline.strftime('%d/%m/%Y') }} · encerra em {{ (op.deadline - agora).days + 1 }} dia(s)</span>
+            {% elif op.deadline %}
+            {{ op.deadline.strftime('%d/%m/%Y') }}
+            {% else %}—{% endif %}
+        </div></div>
         <div><div class="rotulo">💰 Valor</div><div class="valor">{{ 'R$ %.2f'|format(op.value) if op.value is not none else '—' }}</div></div>
         <div><div class="rotulo">📅 Publicado</div><div class="valor">{{ op.published_date.strftime('%d/%m/%Y') if op.published_date else '—' }}</div></div>
         <div><div class="rotulo">Status</div><div class="valor">{{ op.status }}</div></div>

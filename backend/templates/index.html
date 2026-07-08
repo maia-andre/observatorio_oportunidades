@@ -57,13 +57,18 @@
         <div class="field">
             <label for="f-order">Ordenar</label>
             <select id="f-order" name="order" onchange="this.form.submit()">
-                <option value="desc" {% if order != 'asc' %}selected{% endif %}>Mais recentes</option>
+                <option value="desc" {% if order not in ('asc', 'prazo') %}selected{% endif %}>Mais recentes</option>
                 <option value="asc" {% if order == 'asc' %}selected{% endif %}>Mais antigas</option>
+                <option value="prazo" {% if order == 'prazo' %}selected{% endif %}>Prazo mais próximo</option>
             </select>
         </div>
         <div class="field check">
             <input type="checkbox" id="f-rel" name="relevancia" value="todas" {% if relevancia == 'todas' %}checked{% endif %} onchange="this.form.submit()">
             <label for="f-rel">Incluir irrelevantes</label>
+        </div>
+        <div class="field check">
+            <input type="checkbox" id="f-venc" name="vencidas" value="todas" {% if vencidas == 'todas' %}checked{% endif %} onchange="this.form.submit()">
+            <label for="f-venc">Incluir vencidas</label>
         </div>
     </div>
 </form>
@@ -93,10 +98,20 @@
                 <td>{{ op.published_date.strftime('%d/%m/%Y') if op.published_date else '—' }}</td>
                 <td>
                     <a href="/opportunity/{{ op.id }}" class="titulo-op">{{ op.title }}</a>
+                    {% if ultima_coleta and op.collected_at and op.collected_at.date() == ultima_coleta.date() %}<span class="chip-nova">nova</span>{% endif %}
                     <div class="meta-linha">{{ op.description[:140] + '…' if op.description and op.description|length > 140 else op.description or '' }}</div>
                     {% if op.deadline or op.value %}
                     <div class="meta-linha">
-                        {% if op.deadline %}⏰ Prazo: <strong>{{ op.deadline.strftime('%d/%m/%Y') }}</strong>{% endif %}
+                        {% if op.deadline %}
+                            {% set dias = (op.deadline - agora).days %}
+                            {% if op.deadline < agora %}
+                            ⏰ Prazo: <strong class="prazo-vencido">{{ op.deadline.strftime('%d/%m/%Y') }} · vencida</strong>
+                            {% elif dias <= 7 %}
+                            ⏰ Prazo: <strong class="prazo-urgente">{{ op.deadline.strftime('%d/%m/%Y') }} · encerra em {{ dias + 1 }} dia(s)</strong>
+                            {% else %}
+                            ⏰ Prazo: <strong>{{ op.deadline.strftime('%d/%m/%Y') }}</strong>
+                            {% endif %}
+                        {% endif %}
                         {% if op.deadline and op.value %} &nbsp;·&nbsp; {% endif %}
                         {% if op.value %}💰 R$ {{ '%.2f'|format(op.value) }}{% endif %}
                     </div>
@@ -132,7 +147,7 @@
 </div>
 
 {% if total_pages > 1 %}
-{% set qs = "q=" ~ q|urlencode ~ "&source=" ~ source|urlencode ~ "&category=" ~ category|urlencode ~ "&order=" ~ order|urlencode ~ "&relevancia=" ~ relevancia|urlencode ~ "&prazo=" ~ prazo|urlencode ~ "&valor=" ~ valor|urlencode ~ "&municipio=" ~ municipio %}
+{% set qs = "q=" ~ q|urlencode ~ "&source=" ~ source|urlencode ~ "&category=" ~ category|urlencode ~ "&order=" ~ order|urlencode ~ "&relevancia=" ~ relevancia|urlencode ~ "&vencidas=" ~ vencidas|urlencode ~ "&prazo=" ~ prazo|urlencode ~ "&valor=" ~ valor|urlencode ~ "&municipio=" ~ municipio %}
 <nav class="paginacao">
     {% if page > 1 %}
     <a href="?{{ qs }}&page={{ page - 1 }}" class="btn btn-outline btn-sm">← Anterior</a>
