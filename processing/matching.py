@@ -18,6 +18,7 @@ PESO_CATEGORIA = 30   # por categoria de interesse que casa (até 2 contam)
 PESO_MUNICIPIO = 25   # oportunidade cita o nome do município
 PESO_UF = 10          # mesma UF (quando não cita o município)
 PESO_KEYWORD = 8      # por termo de interesse presente no texto (até 2 contam)
+PESO_SECRETARIA = 15  # secretaria sugerida pela curadoria casa com interesse
 PESO_ABERTURA = 10    # prazo em aberto (futuro)
 PESO_VENCIDA = 25     # penalidade: prazo já vencido (não acionável)
 
@@ -69,6 +70,17 @@ def score_match(op: Opportunity, profile: MunicipalProfile) -> Tuple[int, List[s
     if kw_match:
         score += min(2, len(kw_match)) * PESO_KEYWORD
         justificativa.append("termos de interesse: " + ", ".join(sorted(kw_match)))
+
+    # 3.5) Secretaria sugerida pela curadoria LLM casa com interesse do perfil.
+    # Contenção nos dois sentidos para casar "inovacao" ⊆ "inovacao e tecnologia".
+    # Sem curadoria (department nulo) o sinal simplesmente não existe — o núcleo
+    # do matching segue determinístico. Pode reforçar o sinal de categoria (dois
+    # sistemas independentes concordando é aderência maior mesmo).
+    if op.department:
+        dep = _norm(op.department)
+        if any(t in dep or dep in t for t in interesses if len(t) > 3):
+            score += PESO_SECRETARIA
+            justificativa.append(f"secretaria sugerida ({op.department}) é de interesse")
 
     # 4) Prazo: em aberto soma (acionável agora); vencido penaliza (não acionável).
     if op.deadline and op.deadline >= datetime.now():
