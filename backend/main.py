@@ -37,6 +37,7 @@ def read_root(
     category: str = "",
     order: str = "desc",
     relevancia: str = "relevantes",
+    vencidas: str = "",
     prazo: str = "",
     valor: str = "",
     municipio: int = -1,
@@ -45,6 +46,8 @@ def read_root(
     """Painel com busca full-text (FTS5/BM25), filtros, ordenação e paginação."""
     if page < 1:
         page = 1
+
+    agora = datetime.now()
 
     with Session(engine) as session:
         # Fontes e categorias distintas para alimentar os seletores de filtro.
@@ -60,6 +63,8 @@ def read_root(
         profiles = session.exec(
             select(MunicipalProfile).order_by(MunicipalProfile.name)
         ).all()
+        # Momento da coleta mais recente — itens desse "lote" ganham o selo NOVA.
+        ultima_coleta = session.exec(select(func.max(Opportunity.collected_at))).one()
         # Município-foco padrão (env FOCO_MUNICIPIO) quando nenhum é informado (-1).
         # municipio == 0 = "Sem município" escolhido explicitamente (não re-aplica o foco).
         if municipio < 0:
@@ -75,11 +80,17 @@ def read_root(
                 stmt = stmt.where(Opportunity.category == category)
             if relevancia != "todas":
                 stmt = stmt.where(Opportunity.status != "irrelevante")
+            # Ciclo de vida: por padrão oculta oportunidades com prazo já vencido
+            # (sem prazo conhecido continua visível — pode estar aberta).
+            if vencidas != "todas":
+                stmt = stmt.where(or_(
+                    Opportunity.deadline.is_(None),
+                    Opportunity.deadline >= agora,
+                ))
             # Filtro por prazo (deadline)
             if prazo == "com":
                 stmt = stmt.where(Opportunity.deadline.is_not(None))
             elif prazo in ("30", "90"):
-                agora = datetime.now()
                 stmt = stmt.where(
                     Opportunity.deadline.is_not(None),
                     Opportunity.deadline >= agora,
@@ -151,6 +162,11 @@ def read_root(
 
             if order == "asc":
                 statement = statement.order_by(Opportunity.published_date.asc())
+            elif order == "prazo":
+                # Urgência: prazo mais próximo primeiro; sem prazo vai para o fim.
+                statement = statement.order_by(
+                    Opportunity.deadline.is_(None), Opportunity.deadline.asc()
+                )
             else:
                 statement = statement.order_by(Opportunity.published_date.desc())
 
@@ -177,12 +193,15 @@ def read_root(
                 "category": category,
                 "order": order,
                 "relevancia": relevancia,
+                "vencidas": vencidas,
                 "prazo": prazo,
                 "valor": valor,
                 "municipio": municipio,
                 "profiles": profiles,
                 "matches": matches,
                 "usando_fts": usando_fts,
+                "agora": agora,
+                "ultima_coleta": ultima_coleta,
             },
         )
 
@@ -195,5 +214,7 @@ def opportunity_detail(request: Request, op_id: int):
         if op is None:
             raise HTTPException(status_code=404, detail="Oportunidade não encontrada")
         return templates.TemplateResponse(
-            request=request, name="detail.html", context={"op": op}
+            request=request,
+            name="detail.html",
+            context={"op": op, "agora": datetime.now()},
         )
