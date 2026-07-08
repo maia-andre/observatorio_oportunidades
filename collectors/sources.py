@@ -31,6 +31,7 @@ SOURCES = [
     {"name": "Capta",                  "tier": "A", "type": "rss", "url": "https://capta.org.br/feed", "enabled": True, "verify_ssl": True, "notes": "WordPress — fonte de editais/financiamento (alta relevância na Fase 0)"},
     {"name": "CENPEC",                 "tier": "A", "type": "rss", "url": "https://www.cenpec.org.br/feed", "enabled": True, "verify_ssl": True, "notes": "WordPress"},
     {"name": "Prêmio Espírito Público","tier": "A", "type": "rss", "url": "https://premioespiritopublico.org.br/feed", "enabled": True, "verify_ssl": True, "notes": "WordPress"},
+    {"name": "Agência FAPESP",         "tier": "A", "type": "rss", "url": "https://agencia.fapesp.br/rss/", "enabled": True, "verify_ssl": True, "notes": "Notícias de fomento/pesquisa SP — chamadas e programas passam pela porta de relevância"},
 
     # ──────────────────── Nível B — API / JSON / Sitemap ────────────────────
     {"name": "Portal da Transparência","tier": "B", "type": "json",    "url": "https://api.portaldatransparencia.gov.br/api-de-dados/emendas", "enabled": False, "verify_ssl": True, "notes": "Exige header 'chave-api-dados' (cadastro gratuito) — sem chave retorna 401"},
@@ -67,6 +68,12 @@ SOURCES = [
     # ──────────── Candidatas estruturadas (recomendadas nesta etapa) ────────────
     {"name": "PNCP-API",               "tier": "B", "type": "json", "url": "https://pncp.gov.br/api/consulta/v1/contratacoes/proposta", "enabled": False, "verify_ssl": True, "notes": "Coletor dedicado: collectors/api/pncp_collector.py (exige dataFinal + modalidade; tamanhoPagina>=10)"},
     {"name": "Querido Diário",         "tier": "B", "type": "json", "url": "https://queridodiario.ok.org.br/api/gazettes", "enabled": False, "verify_ssl": True, "notes": "API retorna 403 (bloqueio tipo Cloudflare) deste ambiente — reavaliar acesso/headers"},
+    {"name": "FINEP-API",              "tier": "B", "type": "json", "url": "https://www.finep.gov.br/o/c/chamadapublicas/?pageSize=1", "enabled": False, "verify_ssl": True, "notes": "Coletor dedicado: collectors/api/finep_collector.py (API Liferay anônima; filtra situacao='aberta'; prazoProposto=deadline)"},
+
+    # ──────────── Candidatas SP/SJC investigadas em 07/2026 (sem endpoint utilizável) ────────────
+    {"name": "Desenvolve SP",          "tier": "D", "type": "html", "url": "https://www.desenvolvesp.com.br/", "enabled": False, "verify_ssl": True, "notes": "Sem RSS; sitemap.xml retorna 403 (anti-bot) — linhas de crédito municipais exigiriam scraping dedicado"},
+    {"name": "Prefeitura SJC",         "tier": "D", "type": "html", "url": "https://www.sjc.sp.gov.br/", "enabled": False, "verify_ssl": True, "notes": "Sem /feed nem sitemap.xml (404) — portal próprio; reavaliar página de editais/licitações"},
+    {"name": "FAPESP (chamadas)",      "tier": "D", "type": "html", "url": "https://fapesp.br/chamadas", "enabled": False, "verify_ssl": True, "notes": "Sem RSS de chamadas (Agência FAPESP cobre por notícia) — página de chamadas vigentes exigiria scraping dedicado"},
 ]
 
 
