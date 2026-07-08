@@ -32,6 +32,11 @@ class Opportunity(SQLModel, table=True):
     relevance_score: Optional[float] = Field(default=None, index=True)
     status: str = Field(default="novo", index=True)
     collected_at: datetime = Field(default_factory=utcnow)
+    # Curadoria LLM opcional (Gemini free tier, processing/curate_llm.py) — ficam
+    # nulos quando a curadoria está desligada (sem GEMINI_API_KEY) ou pendente.
+    summary: Optional[str] = None          # resumo executivo (1–2 frases)
+    department: Optional[str] = None       # secretaria municipal sugerida
+    curated_at: Optional[datetime] = None  # quando foi curado (evita reprocessar)
 
 
 class MunicipalProfile(SQLModel, table=True):

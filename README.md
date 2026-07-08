@@ -24,7 +24,7 @@ A arquitetura foi inspirada em sistemas modernos de curadoria de informação, e
 
 O objetivo não é apenas realizar scraping de páginas, mas criar uma plataforma evolutiva de inteligência institucional.
 
-> **Estado de implementação (Jun/2026):** o backend entrega, **sem LLM** (100% determinístico), um pipeline ponta a ponta — coleta (RSS + PNCP + Portal da Transparência) → relevância → classificação ponderada (multi-rótulo) → enriquecimento (regex + PDF) → busca **FTS5** → **matching municipal** (aderência oportunidade × município). Fases 1, 2 e 4 (PoC) concluídas; a Fase 3 foi entregue na variante "lite" (sem IA). Detalhes operacionais em `CLAUDE.md`.
+> **Estado de implementação (Jul/2026):** o backend entrega um pipeline ponta a ponta de núcleo **100% determinístico** — coleta (RSS + PNCP + **FINEP** + Portal da Transparência) → relevância → classificação ponderada (multi-rótulo) → enriquecimento (regex + PDF) → busca **FTS5** → **matching municipal** (aderência oportunidade × município, com ciclo de vida de prazos no painel). Fases 1, 2 e 4 (PoC) concluídas; a Fase 3 foi entregue na variante "lite" (determinística) **mais uma camada opcional de curadoria com IA** (resumo + secretaria sugerida via Gemini free tier, custo zero, ativada por `GEMINI_API_KEY`). Detalhes operacionais em `CLAUDE.md`.
 
 ---
 

@@ -11,9 +11,9 @@ Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste r
 ## Estado atual
 
 - **Fases 0–1** (Descoberta, Radar) ✅, **Fase 2** (Curadoria por regras) ✅ e **Fase 4** (Matching municipal, PoC) ✅.
-- **Pipeline atual (tudo determinístico, SEM LLM):** coleta (**RSS + PNCP + Portal da Transparência/emendas**) → **porta de relevância** (`processing/relevance.py`) → **classificação ponderada** com multi-rótulo (`processing/classifier.py`) → **enriquecimento** de prazo/valor por regex + **PDF** (`processing/enrich.py`, PyMuPDF) com **anti-contaminação** de boilerplate.
-- **Painel:** busca full-text **SQLite FTS5/BM25** (acento-insensível, `backend/search.py`), filtros (fonte/categoria/prazo/valor), página de detalhe `/opportunity/{id}`, e **matching municipal** (aderência 0–100, `processing/matching.py`).
-- **Restrição do projeto:** evolução **sem LLM / sem custo de API** (decisão deliberada — a Fase 3 "IA" do roadmap foi substituída pela "Fase 3-lite" determinística).
+- **Pipeline (núcleo determinístico):** coleta (**RSS + PNCP + FINEP + Portal da Transparência/emendas**) → **porta de relevância** (`processing/relevance.py`) → **classificação ponderada** com multi-rótulo (`processing/classifier.py`) → **enriquecimento** de prazo/valor por regex + **PDF** (`processing/enrich.py`, PyMuPDF) com **anti-contaminação** de boilerplate → **curadoria LLM opcional** (`processing/curate_llm.py`, Gemini free tier: resumo + secretaria sugerida; pula sem erro se faltar `GEMINI_API_KEY`).
+- **Painel:** busca full-text **SQLite FTS5/BM25** (acento-insensível, `backend/search.py`), filtros (fonte/categoria/prazo/valor), **ciclo de vida** (vencidas ocultas por padrão, ordenação por urgência, selos nova/vencida), página de detalhe `/opportunity/{id}`, e **matching municipal** (aderência 0–100, `processing/matching.py`, penaliza prazo vencido).
+- **Restrição do projeto:** **custo zero**. O núcleo (coleta/relevância/classificação/busca/matching) é determinístico e funciona sem chave alguma; a única camada com LLM é a curadoria opcional via **free tier do Gemini** (decisão de 07/2026 — revisão da regra anterior "sem LLM").
 - Backend FastAPI + SQLModel; painel Jinja2 + PicoCSS (CDN). **Banco padrão SQLite**; PostgreSQL via `DATABASE_URL`.
 - Issues **#3/#4** (validação de fontes, Diego) seguem abertas; **#6–#12** fechadas.
 
@@ -41,12 +41,14 @@ Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste r
   - `validate_sources.py` — **probe** de saúde das fontes (ao vivo)
   - `rss/rss_collector.py` — RSS (lê do registro)
   - `api/pncp_collector.py` — **PNCP** (editais c/ proposta aberta; suporta `--uf`)
+  - `api/finep_collector.py` — **FINEP** (chamadas públicas abertas; API Liferay anônima)
   - `api/transparencia_collector.py` — **Portal da Transparência** (emendas; chave via env)
   - `api/api_collector.py` — coletor de sitemap **legado** (não usado na pipeline)
 - `processing/` — pós-coleta (tudo sem LLM):
   - `normalizer.py` (normalização) · `relevance.py` (porta de relevância)
   - `rules.py` + `classifier.py` (classificação ponderada, multi-rótulo)
   - `extractor.py` + `enrich.py` (prazo/valor por regex + PDF + anti-contaminação)
+  - `curate_llm.py` (curadoria LLM **opcional**: resumo + secretaria via Gemini free tier)
   - `matching.py` (aderência municipal) · `seed_profiles.py` (perfis de exemplo)
 - `run_pipeline.py` — orquestra coleta → relevância → classificação → enriquecimento (aceita `--reset`)
 - `.env.example` — modelo de variáveis (chaves/foco); o `.env` é **gitignored**
@@ -54,11 +56,11 @@ Orientações para o Claude Code (e para os desenvolvedores) trabalharem neste r
 
 ## Modelo de dados (`Opportunity`)
 
-**`Opportunity`** (`backend/models.py`): `id` · `title` · `description?` · `url` (**único/indexado — chave de dedup**) · `published_date?` · `source` · `category?` · `categories?` (multi-rótulo, separado por vírgula) · `deadline?` · `value?` (R$) · `relevance_score?` (0–1) · `status` · `collected_at`. Ciclo do `status`: `novo` → (relevância) `irrelevante` ou segue → (classificação) `classificado`/`nao_classificado`.
+**`Opportunity`** (`backend/models.py`): `id` · `title` · `description?` · `url` (**único/indexado — chave de dedup**) · `published_date?` · `source` · `category?` · `categories?` (multi-rótulo, separado por vírgula) · `deadline?` · `value?` (R$) · `relevance_score?` (0–1) · `status` · `collected_at` · `summary?`/`department?`/`curated_at?` (curadoria LLM opcional). Ciclo do `status`: `novo` → (relevância) `irrelevante` ou segue → (classificação) `classificado`/`nao_classificado`.
 
 **`MunicipalProfile`**: `id` · `name` · `uf` · `interests` (categorias/keywords por vírgula) · `population?` — usado pelo matching (`processing/matching.py`).
 
-O helper `utcnow()` substitui o `datetime.utcnow()` depreciado. **Sem migrations**: `create_all` cria tabelas faltantes mas **não** altera colunas — mudança de modelo exige recriar o banco (apagar o `.db`).
+O helper `utcnow()` substitui o `datetime.utcnow()` depreciado. **Sem migrations**: `create_all` cria tabelas faltantes mas **não** altera colunas. Exceção mínima: `_ensure_columns()` (`backend/database.py`) adiciona via `ALTER TABLE` colunas **novas e anuláveis** que faltem (ex.: campos de curadoria) — qualquer mudança além disso (renomear/tipar/NOT NULL) ainda exige recriar o banco (apagar o `.db`).
 
 ## Como rodar (local, sem Docker)
 
@@ -72,6 +74,7 @@ pip install -r requirements.txt   # psycopg2-binary é OPCIONAL (só p/ PostgreS
 
 # 2) (opcional) segredos e foco: copie .env.example -> .env (gitignored) e preencha
 #    PORTAL_TRANSPARENCIA_API_KEY (emendas) · FOCO_UF (ex.: SP) · FOCO_MUNICIPIO
+#    GEMINI_API_KEY (curadoria LLM opcional — chave grátis em aistudio.google.com/apikey)
 set -a; source .env; set +a   # carrega as variáveis no shell atual
 
 # 3) subir o painel (cria banco/tabelas no 1º boot)
@@ -85,7 +88,9 @@ python run_pipeline.py --reset      # reprocessa tudo (após mudar regras)
 python collectors/validate_sources.py            # probe de saúde de TODAS as fontes
 python collectors/rss/rss_collector.py
 python collectors/api/pncp_collector.py --uf=SP  # PNCP, opcionalmente por estado
+python collectors/api/finep_collector.py         # FINEP (chamadas abertas, sem chave)
 python collectors/api/transparencia_collector.py --probe   # requer chave no ambiente
+python processing/curate_llm.py --limit=20       # curadoria LLM (requer GEMINI_API_KEY)
 python processing/classifier.py --reset
 python processing/enrich.py --limit=10           # prazo/valor (regex + PDF), também roda na pipeline
 python processing/seed_profiles.py               # perfis municipais de exemplo
@@ -113,7 +118,7 @@ python processing/seed_profiles.py               # perfis municipais de exemplo
 ## Convenções gerais
 
 - Código e comentários em **português**.
-- **Sem LLM / sem custo de API:** toda a curadoria/extração/matching é determinística (regras, regex, PyMuPDF, FTS5, overlap). Antes de adicionar dependência, confirmar.
+- **Custo zero:** o núcleo (relevância/classificação/extração/busca/matching) é determinístico (regras, regex, PyMuPDF, FTS5, overlap) e roda sem chave alguma. LLM só na **curadoria opcional** (`processing/curate_llm.py`, Gemini free tier, gateada por `GEMINI_API_KEY` — pula sem erro). Antes de adicionar dependência, confirmar.
 - **Sem migrations:** schema via `SQLModel.metadata.create_all` (cria tabelas faltantes, não altera colunas). Mudança de modelo → recriar o banco.
 - **Commit por tarefa; PR por etapa** para a `main`.
 
